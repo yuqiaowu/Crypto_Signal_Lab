@@ -2,7 +2,7 @@ name: Daily Gemini Report
 
 on:
   schedule:
-    - cron: '0 1 * * *'
+    - cron: '5 0 * * *'
   workflow_dispatch:
 
 jobs:
