@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from datetime import datetime, timedelta, timezone
 import json
 import time
@@ -723,20 +722,7 @@ def plot_price_volume_rsi(
 
 
 def main() -> None:
-    proxy_url = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
-    if proxy_url is not None:
-        proxy_url = proxy_url.strip()
-
-    use_local_proxy = os.environ.get("USE_LOCAL_PROXY", "1").lower()
-    if proxy_url:
-        pass
-    elif use_local_proxy in {"1", "true", "yes"}:
-        proxy_url = "http://127.0.0.1:7890"
-    else:
-        proxy_url = None
-        for key in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
-            os.environ.pop(key, None)
-    exchange = build_exchange(proxy_url=proxy_url)
+    exchange = build_exchange()
 
     df = fetch_daily_ohlcv(exchange)
     df = add_bollinger_bands(df)
