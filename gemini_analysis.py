@@ -96,12 +96,16 @@ def main() -> None:
     proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
     if proxy is not None:
         proxy = proxy.strip()
-    if not proxy:
-        use_local_proxy = os.environ.get("USE_LOCAL_PROXY", "1").lower()
-        if use_local_proxy in {"1", "true", "yes"}:
-            proxy = "http://127.0.0.1:7890"
-        else:
-            proxy = None
+
+    use_local_proxy = os.environ.get("USE_LOCAL_PROXY", "1").lower()
+    if proxy:
+        pass
+    elif use_local_proxy in {"1", "true", "yes"}:
+        proxy = "http://127.0.0.1:7890"
+    else:
+        proxy = None
+        for key in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
+            os.environ.pop(key, None)
     signals = load_signals(SIGNAL_FILE)
     payload = build_payload(signals)
     gemini_text = call_gemini(api_key=api_key, proxy=proxy, payload=payload)
