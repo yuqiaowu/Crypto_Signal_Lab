@@ -40,7 +40,9 @@ jobs:
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: Daily ETH/USDT Gemini Report
           body: |
-            附件为今日的 Gemini 分析报告。
+            附件为今日的 Gemini 分析报告与图表。
           to: ${{ secrets.REPORT_RECIPIENT }}
           from: Daily ETH Report <${{ secrets.MAIL_USERNAME }}>
-          attachments: gemini_analysis.md
+          attachments: |
+            gemini_analysis.md
+            eth_okx_daily.png
