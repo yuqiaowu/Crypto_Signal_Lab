@@ -356,7 +356,7 @@ def export_recent_signals(df: pd.DataFrame, path: str = "signals_60d.json", look
             },
             "ma_status": ma_status_entry,
         }
-    rows.append(entry)
+        rows.append(entry)
 
     with open(path, "w", encoding="utf-8") as f:
         json.dump(rows, f, ensure_ascii=False, indent=2)
