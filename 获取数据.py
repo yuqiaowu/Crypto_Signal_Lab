@@ -341,6 +341,9 @@ def export_recent_signals(df: pd.DataFrame, path: str = "signals_60d.json", look
             "rsi14": round(float(row.get("rsi_14", float("nan"))), 2) if not pd.isna(row.get("rsi_14")) else None,
             "bb_lower": round(float(row.get("bb_lower", float("nan"))), 2) if not pd.isna(row.get("bb_lower")) else None,
             "bb_lower_slope": round(float(row.get("bb_lower_slope", float("nan"))), 4) if not pd.isna(row.get("bb_lower_slope")) else None,
+            "ma_5": round(float(row.get("ma_5", float("nan"))), 2) if not pd.isna(row.get("ma_5")) else None,
+            "ma_10": round(float(row.get("ma_10", float("nan"))), 2) if not pd.isna(row.get("ma_10")) else None,
+            "ma_20": round(float(row.get("ma_20", float("nan"))), 2) if not pd.isna(row.get("ma_20")) else None,
             "ma_60": round(float(row.get("ma_60", float("nan"))), 2) if not pd.isna(row.get("ma_60")) else None,
             "ma_120": round(float(row.get("ma_120", float("nan"))), 2) if not pd.isna(row.get("ma_120")) else None,
             "ma_180": round(float(row.get("ma_180", float("nan"))), 2) if not pd.isna(row.get("ma_180")) else None,
@@ -725,6 +728,8 @@ def main() -> None:
     exchange = build_exchange()
 
     df = fetch_daily_ohlcv(exchange)
+    if len(df) > 0:
+        df = df.iloc[:-1].copy()
     df = add_bollinger_bands(df)
     df = add_rsi_indicators(df, periods=[6, 14, 24])
     df = add_macd_indicators(df)
