@@ -27,6 +27,9 @@ jobs:
       - name: Generate signals and analysis
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          USE_LOCAL_PROXY: "0"
+          HTTP_PROXY: ""
+          HTTPS_PROXY: ""
         run: |
           python 获取数据.py
           python gemini_analysis.py
