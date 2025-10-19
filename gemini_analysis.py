@@ -89,6 +89,12 @@ def save_report(payload: Dict[str, Any], gemini_text: str, path: Path) -> None:
         f.write(gemini_text or "(无回复)")
 
 
+def save_email_body(gemini_text: str, path: Path) -> None:
+    body = (gemini_text or "").strip() or "(无回复)"
+    with path.open("w", encoding="utf-8") as f:
+        f.write(body)
+
+
 def main() -> None:
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
@@ -112,6 +118,9 @@ def main() -> None:
     gemini_text = call_gemini(api_key=api_key, proxy=proxy, payload=payload)
     save_report(payload, gemini_text, Path("gemini_analysis.md"))
     print("分析结果已写入 gemini_analysis.md")
+    # 假设已有变量 gemini_text 与 payload，并已写入 gemini_analysis.md
+    # 这里追加生成仅用于邮件正文的文件（不包含JSON与提示词）
+    save_email_body(gemini_text, Path("gemini_email_body.md"))
 
 
 if __name__ == "__main__":
