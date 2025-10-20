@@ -239,18 +239,9 @@ def add_price_percentile(df: pd.DataFrame, window: int = 20) -> pd.DataFrame:
 def compute_signal_info(df: pd.DataFrame) -> Dict[str, Any]:
     price_percentile = df.get("price_percentile_20")
     volume_ratio = df.get("volume_ratio_ma_20")
-    volume_ratio_prev = volume_ratio.shift(1) if volume_ratio is not None else None
-    if volume_ratio is not None:
-        volume_ratio_effective = volume_ratio.copy()
-        if len(volume_ratio_effective) > 1:
-            prev_val = volume_ratio_prev.iloc[-1]
-            if not pd.isna(prev_val):
-                volume_ratio_effective.iloc[-1] = prev_val
-    else:
-        volume_ratio_effective = None
 
-    low_high_mask = ((price_percentile < 0.10) & (volume_ratio_effective > 2.0)).fillna(False)
-    high_high_mask = ((price_percentile > 0.90) & (volume_ratio_effective > 2.0)).fillna(False)
+    low_high_mask = ((price_percentile < 0.10) & (volume_ratio > 2.0)).fillna(False)
+    high_high_mask = ((price_percentile > 0.90) & (volume_ratio > 2.0)).fillna(False)
 
     if "rsi_14" in df:
         rsi_overbought = (df["rsi_14"] > 70).fillna(False)
@@ -298,8 +289,6 @@ def compute_signal_info(df: pd.DataFrame) -> Dict[str, Any]:
     return {
         "price_percentile": price_percentile,
         "volume_ratio": volume_ratio,
-        "volume_ratio_prev": volume_ratio_prev,
-        "volume_ratio_effective": volume_ratio_effective,
         "low_high_mask": low_high_mask,
         "high_high_mask": high_high_mask,
         "rsi_overbought": rsi_overbought,
@@ -335,8 +324,6 @@ def export_recent_signals(df: pd.DataFrame, path: str = "signals_60d.json", look
             "close": round(float(row.get("close", float("nan"))), 2) if not pd.isna(row.get("close")) else None,
             "volume": round(float(row.get("volume", float("nan"))), 2) if not pd.isna(row.get("volume")) else None,
             "volume_ratio_ma20": round(float(signals["volume_ratio"].loc[idx]), 2) if signals["volume_ratio"] is not None and not pd.isna(signals["volume_ratio"].loc[idx]) else None,
-            "volume_ratio_ma20_prev": round(float(signals["volume_ratio_prev"].loc[idx]), 2) if signals.get("volume_ratio_prev") is not None and not pd.isna(signals["volume_ratio_prev"].loc[idx]) else None,
-            "volume_ratio_ma20_effective": round(float(signals["volume_ratio_effective"].loc[idx]), 2) if signals.get("volume_ratio_effective") is not None and not pd.isna(signals["volume_ratio_effective"].loc[idx]) else None,
             "price_percentile_20": round(float(signals["price_percentile"].loc[idx]), 4) if signals["price_percentile"] is not None and not pd.isna(signals["price_percentile"].loc[idx]) else None,
             "rsi14": round(float(row.get("rsi_14", float("nan"))), 2) if not pd.isna(row.get("rsi_14")) else None,
             "bb_lower": round(float(row.get("bb_lower", float("nan"))), 2) if not pd.isna(row.get("bb_lower")) else None,
