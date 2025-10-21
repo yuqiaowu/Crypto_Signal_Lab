@@ -1,0 +1,29 @@
+# Environment secrets
+.env
+
+# Python bytecode and caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Generated datasets and reports
+signals_60d.json
+global_onchain_news_snapshot.json
+gemini_analysis.md
+gemini_email_body.md
+
+# Generated images/charts
+eth_okx_daily.png
+eth_atr_percent.png
+
+# Third-party API dumps
+defillama-api.json
+
+# OS/IDE noise
+.DS_Store
+
+# Virtual environments
+.venv/
+venv/
+env/
