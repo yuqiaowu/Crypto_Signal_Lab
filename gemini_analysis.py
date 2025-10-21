@@ -66,12 +66,12 @@ def _summarize_news(snapshot: Dict[str, Any]) -> str | None:
 
 def build_onchain_parts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
     if not snapshot:
-        return {"extra_parts": [], "paragraphs": {}}
+        return {"extra_blocks": [], "paragraphs": {}}
     dr = snapshot.get("daily_report", {}) if isinstance(snapshot, dict) else {}
     stable_para = dr.get("stablecoins", {}).get("paragraph")
     bridge_para = dr.get("bridges", {}).get("paragraph")
     fear_para = dr.get("fear_greed", {}).get("paragraph")
-    # 新增：Gas / mempool 摘要
+
     eth_gas = snapshot.get("eth_gas", {})
     btc_mempool = snapshot.get("btc_mempool", {})
     eth_oracle = eth_gas.get("gas_oracle_summary") if isinstance(eth_gas, dict) else None
@@ -82,6 +82,7 @@ def build_onchain_parts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
         if isinstance(gs, dict):
             eth_base_fee = gs.get("base_fee_gwei")
     btc_rec = btc_mempool.get("recommended_fees") if isinstance(btc_mempool, dict) else None
+
     gas_para_parts = []
     if isinstance(eth_oracle, dict):
         gas_para_parts.append(
@@ -96,26 +97,26 @@ def build_onchain_parts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
     gas_para = "； ".join(gas_para_parts) if gas_para_parts else None
     news_summary = _summarize_news(snapshot)
 
-    extra_parts = []
+    extra_blocks = []
     instructions_extra = (
         "请结合以下链上与情绪数据综合判断：稳定币规模及环比变化、主要跨链桥接的 Top N 与总量、比特币恐慌指数、ETH/BTC Gas 与 mempool 变化、当日重要新闻。"
         "输出结论（看多/中性/看空）、关键理由（引用具体数据）、风险提示、并给出短中期（1-2 周 / 1-2 月）操作建议，说明这些链上与新闻信号如何支撑或抵触观点。"
         "若数据缺失或不稳定，请偏保守，并明确不确定性来源。"
     )
-    extra_parts.append(instructions_extra)
+    extra_blocks.append(instructions_extra)
     if stable_para:
-        extra_parts.append("稳定币摘要：" + str(stable_para))
+        extra_blocks.append("稳定币摘要：" + str(stable_para))
     if bridge_para:
-        extra_parts.append("桥接摘要：" + str(bridge_para))
+        extra_blocks.append("桥接摘要：" + str(bridge_para))
     if fear_para:
-        extra_parts.append("恐慌指数摘要：" + str(fear_para))
+        extra_blocks.append("恐慌指数摘要：" + str(fear_para))
     if gas_para:
-        extra_parts.append("Gas/Mempool 摘要：" + str(gas_para))
+        extra_blocks.append("Gas/Mempool 摘要：" + str(gas_para))
     if news_summary:
-        extra_parts.append("新闻要点：" + news_summary)
-    extra_parts.append("链上快照（JSON）：\n" + json.dumps(snapshot, ensure_ascii=False, indent=2))
+        extra_blocks.append("新闻要点：" + news_summary)
+    extra_blocks.append("链上快照（JSON）：\n" + json.dumps(snapshot, ensure_ascii=False, indent=2))
     return {
-        "extra_parts": extra_parts,
+        "extra_blocks": extra_blocks,
         "paragraphs": {
             "stable": stable_para,
             "bridge": bridge_para,
@@ -138,7 +139,7 @@ def build_payload(
 3. 综合多个指标，尤其注意 RSI、关键点位突破情况（是否连续3天站上关键均线且放量）、成交量变化，而非单一信号判断。
 4. 在形成建议时，请清晰描述你的逻辑，尤其是布林带形态、成交量与均线的配合情况。
 5. 数据中已为每个交易日计算买入/卖出星级（0~3星，分别基于 RSI、放量、DMI 叠加），请结合星级及其他指标作出具体建议，并说明理由。
-6. 请判断是否“有效站上/跌破关键均线”，并给出依据：默认关注 MA20/MA60/MA120/MA180；“有效”的定义为价格至少连续3天在均线之上/之下（可参考 `ma_status.*.stood_above_3` / `ma_status.*.fell_below_3`），同时量能不低于均量（以 `volume_ratio_ma20` 为准；≥1.0 为基本支持，≥1.5 为较强支持）。
+6. 请判断是否“有效站上/跌破关键均线”，并给出依据：默认关注 MA20/MA60/MA120/MA180；“有效”的定义为价格至少连续3天在均线之上/之下，同时量能不低于均量（以 `volume_ratio_ma20` 为准；≥1.0 为基本支持，≥1.5 为较强支持）。
 请输出：
 - 对当前市场趋势的综合概述（布林带、均线、量能等）。
 - 买入/卖出信号的星级解释（对应日期，说明为何给出该星级，是否符合上述规则）。
@@ -152,46 +153,65 @@ def build_payload(
     payload: Dict[str, Any] = {
         "instructions": instructions,
         "recent_data": signals,
-        "extra_parts": [],
+        "extra_blocks": [],
     }
     if onchain:
         oc = build_onchain_parts(onchain)
-        payload["extra_parts"].extend(oc.get("extra_parts", []))
+        payload["extra_blocks"].extend(oc.get("extra_blocks", []))
         payload["onchain_paragraphs"] = oc.get("paragraphs", {})
     if volatility:
         payload["volatility"] = volatility
-        payload["extra_parts"].append(
+        payload["extra_blocks"].append(
             "以下是 ATR 波动率数据（JSON）：\n" + json.dumps(volatility, ensure_ascii=False, indent=2)
         )
     return payload
 
 
-def call_gemini(
+def call_deepseek(
     api_key: str,
     proxy: str | None,
     payload: Dict[str, Any],
+    model: str | None = None,
     max_retries: int | None = None,
     backoff_seconds: int | None = None,
 ) -> str:
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent"
+    url = os.getenv("DEEPSEEK_API_URL", "https://api.deepseek.com/v1/chat/completions")
+    model_name = model or os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
     proxies = {"http": proxy, "https": proxy} if proxy else None
-    parts = [
-        {"text": payload["instructions"]},
-        {"text": "以下是最近60天的信号数据（JSON）：\n" + json.dumps(payload["recent_data"], ensure_ascii=False, indent=2)},
-    ]
-    for extra in payload.get("extra_parts", []):
-        parts.append({"text": str(extra)})
-    request_payload = {"contents": [{"parts": parts}]}
 
-    retries = max_retries if max_retries is not None else int(os.getenv("GEMINI_MAX_RETRIES", "6"))
+    system_prompt = payload["instructions"]
+    user_blocks = [
+        "以下是最近60天的信号数据（JSON）：\n" + json.dumps(payload["recent_data"], ensure_ascii=False, indent=2)
+    ]
+    for block in payload.get("extra_blocks", []):
+        user_blocks.append(str(block))
+    user_message = "\n\n".join(user_blocks)
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_message},
+    ]
+
+    retries = max_retries if max_retries is not None else int(os.getenv("DEEPSEEK_MAX_RETRIES", "6"))
     retries = max(1, retries)
-    backoff = backoff_seconds if backoff_seconds is not None else int(os.getenv("GEMINI_RETRY_BACKOFF", "60"))
+    backoff = backoff_seconds if backoff_seconds is not None else int(os.getenv("DEEPSEEK_RETRY_BACKOFF", "60"))
     backoff = max(1, backoff)
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    request_payload = {
+        "model": model_name,
+        "messages": messages,
+        "temperature": float(os.getenv("DEEPSEEK_TEMPERATURE", "0.6")),
+        "max_tokens": int(os.getenv("DEEPSEEK_MAX_TOKENS", "2048")),
+    }
 
     for attempt in range(retries):
         response = requests.post(
             url,
-            params={"key": api_key},
+            headers=headers,
             json=request_payload,
             proxies=proxies,
             timeout=120,
@@ -199,28 +219,34 @@ def call_gemini(
         if response.status_code == 429:
             if attempt < retries - 1:
                 wait_seconds = backoff * (attempt + 1)
-                print(f"Gemini API 返回 429，{wait_seconds}s 后重试（第 {attempt + 1}/{retries} 次）")
+                print(f"DeepSeek API 返回 429，{wait_seconds}s 后重试（第 {attempt + 1}/{retries} 次）")
                 time.sleep(wait_seconds)
                 continue
-            raise SystemExit("Gemini API 返回 429（请求过多）。请稍后再试或检查配额。")
+            raise SystemExit("DeepSeek API 返回 429（请求过多）。请稍后再试或检查配额。")
+        if response.status_code >= 500 and attempt < retries - 1:
+            wait_seconds = backoff * (attempt + 1)
+            print(f"DeepSeek API 返回 {response.status_code}，{wait_seconds}s 后重试（第 {attempt + 1}/{retries} 次）")
+            time.sleep(wait_seconds)
+            continue
         response.raise_for_status()
         result = response.json()
         break
     else:
-        raise SystemExit("Gemini API 调用失败，已达到最大重试次数。")
+        raise SystemExit("DeepSeek API 调用失败，已达到最大重试次数。")
 
     text_parts: List[str] = []
-    for candidate in result.get("candidates", []):
-        for part in candidate.get("content", {}).get("parts", []):
-            text = part.get("text")
-            if text:
-                text_parts.append(text)
+    choices = result.get("choices", [])
+    for choice in choices:
+        msg = choice.get("message", {})
+        content = msg.get("content")
+        if content:
+            text_parts.append(content)
     return "\n".join(text_parts).strip()
 
 
-def save_report(payload: Dict[str, Any], gemini_text: str, path: Path) -> None:
+def save_report(payload: Dict[str, Any], analysis_text: str, path: Path) -> None:
     with path.open("w", encoding="utf-8") as f:
-        f.write("# Gemini 分析报告\n\n")
+        f.write("# DeepSeek 分析报告\n\n")
         f.write("## 提示内容\n\n")
         f.write(payload["instructions"] + "\n\n")
         f.write("## 最近60天信号数据 (JSON)\n\n")
@@ -238,29 +264,29 @@ def save_report(payload: Dict[str, Any], gemini_text: str, path: Path) -> None:
                 f.write("- Gas/Mempool：" + str(ocp["gas"]) + "\n")
             if ocp.get("news"):
                 f.write("- 新闻要点：" + str(ocp["news"]) + "\n")
-        if payload.get("extra_parts"):
+        if payload.get("extra_blocks"):
             f.write("\n## 链上快照 (JSON)\n\n")
-            onchain_json = next((p for p in payload["extra_parts"] if str(p).startswith("链上快照（JSON）：")), None)
+            onchain_json = next((b for b in payload["extra_blocks"] if str(b).startswith("链上快照（JSON）：")), None)
             if onchain_json:
                 content = str(onchain_json).split("链上快照（JSON）：", 1)[1]
                 f.write("```json\n" + content + "\n```\n\n")
         if payload.get("volatility"):
             f.write("## ATR 波动率数据 (JSON)\n\n")
             f.write("```json\n" + json.dumps(payload["volatility"], ensure_ascii=False, indent=2) + "\n```\n\n")
-        f.write("## Gemini 回复\n\n")
-        f.write(gemini_text or "(无回复)")
+        f.write("## DeepSeek 回复\n\n")
+        f.write(analysis_text or "(无回复)")
 
 
-def save_email_body(gemini_text: str, path: Path) -> None:
-    body = (gemini_text or "").strip() or "(无回复)"
+def save_email_body(analysis_text: str, path: Path) -> None:
+    body = (analysis_text or "").strip() or "(无回复)"
     with path.open("w", encoding="utf-8") as f:
         f.write(body)
 
 
 def main() -> None:
-    api_key = os.environ.get("GEMINI_API_KEY")
+    api_key = os.environ.get("DEEPSEEK_API_KEY")
     if not api_key:
-        raise SystemExit("GEMINI_API_KEY 未设置")
+        raise SystemExit("DEEPSEEK_API_KEY 未设置")
 
     proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
     if proxy is not None:
@@ -275,16 +301,15 @@ def main() -> None:
         proxy = None
         for key in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
             os.environ.pop(key, None)
+
     signals = load_signals(SIGNAL_FILE)
     volatility = load_volatility(VOLATILITY_FILE)
     onchain = load_onchain_snapshot(ONCHAIN_SNAPSHOT_FILE)
     payload = build_payload(signals, onchain, volatility)
-    gemini_text = call_gemini(api_key=api_key, proxy=proxy, payload=payload)
-    save_report(payload, gemini_text, Path("gemini_analysis.md"))
+    analysis_text = call_deepseek(api_key=api_key, proxy=proxy, payload=payload)
+    save_report(payload, analysis_text, Path("gemini_analysis.md"))
     print("分析结果已写入 gemini_analysis.md")
-    # 假设已有变量 gemini_text 与 payload，并已写入 gemini_analysis.md
-    # 这里追加生成仅用于邮件正文的文件（不包含JSON与提示词）
-    save_email_body(gemini_text, Path("gemini_email_body.md"))
+    save_email_body(analysis_text, Path("gemini_email_body.md"))
 
 
 if __name__ == "__main__":
