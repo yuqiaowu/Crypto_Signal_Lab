@@ -24,14 +24,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Generate signals and analysis
+      - name: Generate datasets and analysis
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
           USE_LOCAL_PROXY: "0"
           HTTP_PROXY: ""
           HTTPS_PROXY: ""
         run: |
           python 获取数据.py
+          python fetch_onchain_and_news.py
           python gemini_analysis.py
 
       - name: Send report via email
@@ -50,3 +52,4 @@ jobs:
           attachments: |
             gemini_analysis.md
             eth_okx_daily.png
+            eth_atr_percent.png
