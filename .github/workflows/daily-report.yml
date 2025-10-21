@@ -48,8 +48,16 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MAX_RETRIES: "6"
           GEMINI_RETRY_BACKOFF: "60"
+          USE_LOCAL_PROXY: "0"
+          HTTP_PROXY: ""
+          HTTPS_PROXY: ""
         run: |
           python gemini_analysis.py
+
+      - name: Prepare email body fallback
+        run: |
+          test -f gemini_email_body.md || echo "Gemini 分析暂不可用（配额/网络限制）。请参考链上与ATR摘要附件。" > gemini_email_body.md
+          test -f gemini_analysis.md || echo "# Gemini 分析报告\n\n(本次未生成，可能因配额或网络限制。)" > gemini_analysis.md
 
       - name: Send report via email
         uses: dawidd6/action-send-mail@v3
@@ -61,7 +69,6 @@ jobs:
           subject: Daily ETH/USDT Gemini Report
           to: ${{ secrets.REPORT_RECIPIENT }}
           from: Daily ETH Report <${{ secrets.MAIL_USERNAME }}>
-          content_type: text/html
           convert_markdown: true
           html_body: file://gemini_email_body.md
           attachments: |
