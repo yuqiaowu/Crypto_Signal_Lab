@@ -28,6 +28,8 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+          GEMINI_MAX_RETRIES: "6"
+          GEMINI_RETRY_BACKOFF: "60"
           USE_LOCAL_PROXY: "0"
           HTTP_PROXY: ""
           HTTPS_PROXY: ""

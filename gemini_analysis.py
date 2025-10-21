@@ -183,9 +183,9 @@ def call_gemini(
         parts.append({"text": str(extra)})
     request_payload = {"contents": [{"parts": parts}]}
 
-    retries = max_retries if max_retries is not None else int(os.getenv("GEMINI_MAX_RETRIES", "3"))
+    retries = max_retries if max_retries is not None else int(os.getenv("GEMINI_MAX_RETRIES", "6"))
     retries = max(1, retries)
-    backoff = backoff_seconds if backoff_seconds is not None else int(os.getenv("GEMINI_RETRY_BACKOFF", "30"))
+    backoff = backoff_seconds if backoff_seconds is not None else int(os.getenv("GEMINI_RETRY_BACKOFF", "60"))
     backoff = max(1, backoff)
 
     for attempt in range(retries):
