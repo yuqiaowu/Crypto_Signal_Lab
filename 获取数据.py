@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import json
 import time
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 import ccxt
 import matplotlib.dates as mdates
@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
+import os
 
 
 def build_exchange(proxy_url: Optional[str] = None) -> ccxt.okx:
@@ -21,6 +22,15 @@ def build_exchange(proxy_url: Optional[str] = None) -> ccxt.okx:
     settings: Dict[str, object] = {
         "enableRateLimit": True,
     }
+    # 自动识别代理：优先使用传入的 proxy_url；否则读取环境变量
+    if not proxy_url:
+        env_proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
+        if env_proxy:
+            proxy_url = env_proxy.strip()
+        else:
+            use_local = os.environ.get("USE_LOCAL_PROXY", "0").lower() in {"1", "true", "yes"}
+            if use_local:
+                proxy_url = "http://127.0.0.1:7890"
     if proxy_url:
         settings["proxies"] = {
             "http": proxy_url,
@@ -210,6 +220,32 @@ def add_dmi_indicators(df: pd.DataFrame, period: int = 14) -> pd.DataFrame:
     return df
 
 
+def add_atr_indicator(df: pd.DataFrame, period: int = 14) -> pd.DataFrame:
+    """
+    计算 ATR 及 ATR%（ATR / close * 100）。
+    使用 Wilder 平滑，与 add_dmi_indicators 中的 ATR 一致。
+    """
+    high = df["high"]
+    low = df["low"]
+    close = df["close"]
+    prev_close = close.shift(1)
+
+    tr_components = pd.concat(
+        [
+            (high - low).abs(),
+            (high - prev_close).abs(),
+            (low - prev_close).abs(),
+        ],
+        axis=1,
+    )
+    tr = tr_components.max(axis=1)
+    atr = tr.ewm(alpha=1 / period, adjust=False).mean()
+
+    df[f"atr_{period}"] = atr
+    df[f"atr_pct_{period}"] = (atr / close.replace(0, np.nan)) * 100
+    return df
+
+
 def add_volume_indicators(df: pd.DataFrame, ma_window: int = 20) -> pd.DataFrame:
     """
     计算成交量的移动均值，以及上一日和当日成交量对均值的占比。
@@ -328,6 +364,7 @@ def export_recent_signals(df: pd.DataFrame, path: str = "signals_60d.json", look
             "rsi14": round(float(row.get("rsi_14", float("nan"))), 2) if not pd.isna(row.get("rsi_14")) else None,
             "bb_lower": round(float(row.get("bb_lower", float("nan"))), 2) if not pd.isna(row.get("bb_lower")) else None,
             "bb_lower_slope": round(float(row.get("bb_lower_slope", float("nan"))), 4) if not pd.isna(row.get("bb_lower_slope")) else None,
+            "atr_pct_14": round(float(row.get("atr_pct_14", float("nan"))), 3) if not pd.isna(row.get("atr_pct_14")) else None,
             "ma_5": round(float(row.get("ma_5", float("nan"))), 2) if not pd.isna(row.get("ma_5")) else None,
             "ma_10": round(float(row.get("ma_10", float("nan"))), 2) if not pd.isna(row.get("ma_10")) else None,
             "ma_20": round(float(row.get("ma_20", float("nan"))), 2) if not pd.isna(row.get("ma_20")) else None,
@@ -352,6 +389,55 @@ def export_recent_signals(df: pd.DataFrame, path: str = "signals_60d.json", look
         json.dump(rows, f, ensure_ascii=False, indent=2)
 
     print(f"已导出最近 {lookback} 天信号至 {path}")
+
+
+def export_atr_metrics(
+    df: pd.DataFrame,
+    period: int = 14,
+    lookback: int = 180,
+    path: str = "atr_metrics.json",
+) -> None:
+    """
+    导出最近 lookback 天的 ATR 与 ATR% 序列及摘要统计。
+    """
+    atr_col = f"atr_{period}"
+    atr_pct_col = f"atr_pct_{period}"
+    if atr_pct_col not in df or atr_col not in df:
+        raise ValueError(f"DataFrame 缺少 {atr_col} 或 {atr_pct_col} 列，无法导出 ATR。")
+
+    subset = df.dropna(subset=[atr_pct_col, atr_col]).tail(lookback)
+    series: List[Dict[str, Any]] = []
+    for idx, row in subset.iterrows():
+        series.append(
+            {
+                "date": idx.strftime("%Y-%m-%d"),
+                "atr": round(float(row[atr_col]), 2),
+                "atr_pct": round(float(row[atr_pct_col]), 3),
+                "close": round(float(row["close"]), 2),
+            }
+        )
+
+    pct_values = [item["atr_pct"] for item in series]
+    summary = {}
+    if pct_values:
+        summary = {
+            "latest": series[-1],
+            "average_pct": round(float(np.mean(pct_values)), 3),
+            "max_pct": round(float(np.max(pct_values)), 3),
+            "min_pct": round(float(np.min(pct_values)), 3),
+        }
+
+    payload = {
+        "period": period,
+        "lookback_days": lookback,
+        "series": series,
+        "summary": summary,
+    }
+
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+
+    print(f"已导出 ATR 数据至 {path}（周期 {period}，最近 {lookback} 天）")
 
 def plot_price_volume_rsi(
     df: pd.DataFrame,
@@ -715,18 +801,22 @@ def main() -> None:
     exchange = build_exchange()
 
     df = fetch_daily_ohlcv(exchange)
+    print(f"获取到日线条数: {len(df)}，时间范围: {df.index.min()} ~ {df.index.max()}")
     if len(df) > 0:
         df = df.iloc[:-1].copy()
+    print(f"去除未收盘当日后条数: {len(df)}")
     df = add_bollinger_bands(df)
     df = add_rsi_indicators(df, periods=[6, 14, 24])
     df = add_macd_indicators(df)
     df = add_dmi_indicators(df)
+    df = add_atr_indicator(df, period=14)
     ma_windows = [5, 10, 20, 60, 120, 180, 200, 250, 360]
     df = add_price_moving_averages(df, windows=ma_windows)
     df = add_volume_indicators(df, ma_window=20)
     df = add_price_percentile(df, window=20)
 
-    export_recent_signals(df)
+    export_recent_signals(df, lookback=60)
+    export_atr_metrics(df, period=14, lookback=180, path="atr_metrics.json")
 
     low_high_mask = ((df["price_percentile_20"] < 0.10) & (df["volume_ratio_ma_20"] > 2.0)).fillna(False)
     high_high_mask = ((df["price_percentile_20"] > 0.90) & (df["volume_ratio_ma_20"] > 2.0)).fillna(False)
@@ -737,6 +827,7 @@ def main() -> None:
         ma_windows=ma_windows,
         plot_mas=False,
     )
+    plot_atr_percent(df, period=14, lookback=180, output_path="eth_atr_percent.png")
 
     latest = df.dropna().iloc[-1]
     prev_ratio = latest["prev_volume_ratio_ma_20"]
@@ -751,6 +842,34 @@ def main() -> None:
     print("布林带下轨斜率 5 日均值:", f"{bb_lower_slope_ma5:.2f}%")
     print("低位放量信号数量:", int(low_high_mask.sum()))
     print("高位放量信号数量:", int(high_high_mask.sum()))
+
+
+def plot_atr_percent(
+    df: pd.DataFrame,
+    period: int = 14,
+    lookback: int = 180,
+    output_path: str = "eth_atr_percent.png",
+) -> None:
+    """
+    绘制 ATR% 变化曲线。
+    """
+    atr_pct_col = f"atr_pct_{period}"
+    if atr_pct_col not in df:
+        raise ValueError(f"DataFrame 缺少 {atr_pct_col} 列，无法绘制 ATR%。")
+
+    subset = df.dropna(subset=[atr_pct_col]).tail(lookback)
+    if subset.empty:
+        raise ValueError("ATR 数据为空，无法绘图。")
+
+    plt.figure(figsize=(12, 4))
+    plt.plot(subset.index, subset[atr_pct_col], color="#ff6f00", linewidth=1.5)
+    plt.title(f"ETH ATR% (Period {period}) - 最近 {lookback} 天")
+    plt.ylabel("ATR%")
+    plt.grid(True, alpha=0.25)
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=160)
+    plt.close()
+    print(f"已保存 ATR% 图像至 {output_path}")
 
 
 if __name__ == "__main__":
