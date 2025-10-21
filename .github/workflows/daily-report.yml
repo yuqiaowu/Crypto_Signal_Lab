@@ -24,7 +24,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Generate datasets and analysis
+      - name: Install CJK fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+
+      - name: Generate datasets
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
@@ -36,6 +41,14 @@ jobs:
         run: |
           python 获取数据.py
           python fetch_onchain_and_news.py
+
+      - name: Run Gemini analysis
+        continue-on-error: true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MAX_RETRIES: "6"
+          GEMINI_RETRY_BACKOFF: "60"
+        run: |
           python gemini_analysis.py
 
       - name: Send report via email

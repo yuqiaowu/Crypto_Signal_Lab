@@ -8,6 +8,9 @@ from typing import Any, Dict, Iterable, List, Optional
 import ccxt
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
+# Configure fonts to support CJK glyphs when available
+plt.rcParams['font.sans-serif'] = ['Noto Sans CJK SC', 'SimHei', 'DejaVu Sans']
+plt.rcParams['axes.unicode_minus'] = False
 from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
@@ -309,19 +312,17 @@ def compute_signal_info(df: pd.DataFrame) -> Dict[str, Any]:
         if col not in df:
             continue
         ma_series = df[col]
-        above = (df["close"] > ma_series).fillna(False)
-        below = (df["close"] < ma_series).fillna(False)
-        stood_above = (above & above.shift(1) & above.shift(2)).fillna(False)
-        stood_above &= ~above.shift(3).fillna(False)
-        stood_above = stood_above.astype(bool)
-        fell_below = (below & below.shift(1) & below.shift(2)).fillna(False)
-        fell_below &= ~below.shift(3).fillna(False)
-        fell_below = fell_below.astype(bool)
+        above = (df["close"] > ma_series).fillna(False).astype(bool)
+        below = (df["close"] < ma_series).fillna(False).astype(bool)
+        stood_above = (above & above.shift(1) & above.shift(2)).fillna(False).astype(bool)
+        stood_above &= ~above.shift(3).fillna(False).astype(bool)
+        fell_below = (below & below.shift(1) & below.shift(2)).fillna(False).astype(bool)
+        fell_below &= ~below.shift(3).fillna(False).astype(bool)
         ma_status[window] = {
             "above": above,
             "below": below,
-            "stood_above_3": stood_above.fillna(False),
-            "fell_below_3": fell_below.fillna(False),
+            "stood_above_3": stood_above,
+            "fell_below_3": fell_below,
         }
 
     return {
