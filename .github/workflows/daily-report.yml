@@ -43,35 +43,30 @@ jobs:
           python fetch_onchain_and_news.py
 
       - name: Run DeepSeek analysis
-        continue-on-error: true
         env:
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-          DEEPSEEK_MAX_RETRIES: "6"
-          DEEPSEEK_RETRY_BACKOFF: "60"
           USE_LOCAL_PROXY: "0"
           HTTP_PROXY: ""
           HTTPS_PROXY: ""
         run: |
-          python gemini_analysis.py
-
+          python deepseek_analysis.py
       - name: Prepare email body fallback
         run: |
-          test -f gemini_email_body.md || echo "DeepSeek 分析暂不可用（配额/网络限制）。请参考链上与ATR摘要附件。" > gemini_email_body.md
-          test -f gemini_analysis.md || echo "# DeepSeek 分析报告\n\n(本次未生成，可能因配额或网络限制。)" > gemini_analysis.md
-
-      - name: Send report via email
+          test -f deepseek_email_body.md || echo "DeepSeek 分析暂不可用（配额/网络限制）。请参考链上与ATR摘要附件。" > deepseek_email_body.md
+          test -f deepseek_analysis.md || echo "# DeepSeek 分析报告\n\n(本次未生成，可能因配额或网络限制。)" > deepseek_analysis.md
+      - name: Send email
         uses: dawidd6/action-send-mail@v3
         with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          username: ${{ secrets.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          subject: Daily ETH/USDT DeepSeek Report
-          to: ${{ secrets.REPORT_RECIPIENT }}
-          from: Daily ETH Report <${{ secrets.MAIL_USERNAME }}>
-          convert_markdown: true
-          html_body: file://gemini_email_body.md
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "ETH 每日报告"
+          from: "${{ secrets.MAIL_FROM }}"
+          to: "${{ secrets.MAIL_TO }}"
+          html_body: file://deepseek_email_body.md
           attachments: |
-            gemini_analysis.md
+            signals_60d.json
+            atr_metrics.json
+            deepseek_analysis.md
             eth_okx_daily.png
             eth_atr_percent.png
