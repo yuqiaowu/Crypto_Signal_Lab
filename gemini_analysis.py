@@ -92,29 +92,19 @@ def build_onchain_parts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
         gas_para_parts.append(f"Blockchair 基础费参考: {eth_base_fee} gwei")
     if isinstance(btc_rec, dict):
         gas_para_parts.append(
-            f"BTC 手续费 — fastest: {btc_rec.get('fastestFee')}, 30min: {btc_rec.get('halfHourFee')}, 60min: {btc_rec.get('hourFee')}, economy: {btc_rec.get('economyFee')}, min: {btc_rec.get('minimumFee')} sat/vB"
+            f"BTC Mempool 建议费率: 最低 {btc_rec.get('minimumFee')} sat/vB, 经济 {btc_rec.get('economyFee')} sat/vB, 正常 {btc_rec.get('normalFee')} sat/vB, 优先 {btc_rec.get('priorityFee')} sat/vB"
         )
-    gas_para = "； ".join(gas_para_parts) if gas_para_parts else None
-    news_summary = _summarize_news(snapshot)
 
-    extra_blocks = []
-    instructions_extra = (
-        "请结合以下链上与情绪数据综合判断：稳定币规模及环比变化、主要跨链桥接的 Top N 与总量、比特币恐慌指数、ETH/BTC Gas 与 mempool 变化、当日重要新闻。"
-        "输出结论（看多/中性/看空）、关键理由（引用具体数据）、风险提示、并给出短中期（1-2 周 / 1-2 月）操作建议，说明这些链上与新闻信号如何支撑或抵触观点。"
-        "若数据缺失或不稳定，请偏保守，并明确不确定性来源。"
-    )
-    extra_blocks.append(instructions_extra)
-    if stable_para:
-        extra_blocks.append("稳定币摘要：" + str(stable_para))
-    if bridge_para:
-        extra_blocks.append("桥接摘要：" + str(bridge_para))
-    if fear_para:
-        extra_blocks.append("恐慌指数摘要：" + str(fear_para))
-    if gas_para:
-        extra_blocks.append("Gas/Mempool 摘要：" + str(gas_para))
-    if news_summary:
-        extra_blocks.append("新闻要点：" + news_summary)
-    extra_blocks.append("链上快照（JSON）：\n" + json.dumps(snapshot, ensure_ascii=False, indent=2))
+    gas_para = "；".join([p for p in gas_para_parts if p]) if gas_para_parts else None
+
+    news_summary = None
+    dr_news = dr.get("news") if isinstance(dr, dict) else None
+    if isinstance(dr_news, dict):
+        news_summary = dr_news.get("paragraph")
+
+    extra_blocks: List[str] = []
+    # 移除超大 JSON 以避免上下文超限：不再附加完整链上快照
+    # extra_blocks.append("链上快照（JSON）：\n" + json.dumps(snapshot, ensure_ascii=False, indent=2))
     return {
         "extra_blocks": extra_blocks,
         "paragraphs": {
@@ -159,11 +149,7 @@ def build_payload(
         oc = build_onchain_parts(onchain)
         payload["extra_blocks"].extend(oc.get("extra_blocks", []))
         payload["onchain_paragraphs"] = oc.get("paragraphs", {})
-    if volatility:
-        payload["volatility"] = volatility
-        payload["extra_blocks"].append(
-            "以下是 ATR 波动率数据（JSON）：\n" + json.dumps(volatility, ensure_ascii=False, indent=2)
-        )
+    payload["volatility"] = volatility or {}
     return payload
 
 
@@ -206,6 +192,7 @@ def call_deepseek(
         "messages": messages,
         "temperature": float(os.getenv("DEEPSEEK_TEMPERATURE", "0.6")),
         "max_tokens": int(os.getenv("DEEPSEEK_MAX_TOKENS", "2048")),
+        "stream": False,
     }
 
     for attempt in range(retries):
@@ -228,8 +215,24 @@ def call_deepseek(
             print(f"DeepSeek API 返回 {response.status_code}，{wait_seconds}s 后重试（第 {attempt + 1}/{retries} 次）")
             time.sleep(wait_seconds)
             continue
-        response.raise_for_status()
-        result = response.json()
+        if response.status_code == 400:
+            try:
+                err_obj = response.json()
+                detail = err_obj.get("error", {}).get("message") or err_obj
+            except ValueError:
+                detail = response.text
+            print(f"DeepSeek API 返回 400：{detail}")
+            return f"DeepSeek API 返回 400（请求无效）：{detail}"
+        if response.status_code >= 400:
+            try:
+                detail = response.json()
+            except ValueError:
+                detail = response.text
+            response.raise_for_status()
+        try:
+            result = response.json()
+        except ValueError as exc:
+            raise SystemExit(f"DeepSeek API 返回无法解析的内容：{response.text[:500]}") from exc
         break
     else:
         raise SystemExit("DeepSeek API 调用失败，已达到最大重试次数。")
@@ -272,7 +275,11 @@ def save_report(payload: Dict[str, Any], analysis_text: str, path: Path) -> None
                 f.write("```json\n" + content + "\n```\n\n")
         if payload.get("volatility"):
             f.write("## ATR 波动率数据 (JSON)\n\n")
-            f.write("```json\n" + json.dumps(payload["volatility"], ensure_ascii=False, indent=2) + "\n```\n\n")
+            f.write(
+                "```json\n"
+                + json.dumps(payload["volatility"], ensure_ascii=False, indent=2)
+                + "\n```\n\n"
+            )
         f.write("## DeepSeek 回复\n\n")
         f.write(analysis_text or "(无回复)")
 
