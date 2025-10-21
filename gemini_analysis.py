@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -165,7 +166,13 @@ def build_payload(
     return payload
 
 
-def call_gemini(api_key: str, proxy: str | None, payload: Dict[str, Any]) -> str:
+def call_gemini(
+    api_key: str,
+    proxy: str | None,
+    payload: Dict[str, Any],
+    max_retries: int | None = None,
+    backoff_seconds: int | None = None,
+) -> str:
     url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent"
     proxies = {"http": proxy, "https": proxy} if proxy else None
     parts = [
@@ -176,18 +183,32 @@ def call_gemini(api_key: str, proxy: str | None, payload: Dict[str, Any]) -> str
         parts.append({"text": str(extra)})
     request_payload = {"contents": [{"parts": parts}]}
 
-    response = requests.post(
-        url,
-        params={"key": api_key},
-        json=request_payload,
-        proxies=proxies,
-        timeout=120,
-    )
-    if response.status_code == 429:
-        raise SystemExit("Gemini API 返回 429（请求过多）。请稍后再试或检查配额。")
-    response.raise_for_status()
+    retries = max_retries if max_retries is not None else int(os.getenv("GEMINI_MAX_RETRIES", "3"))
+    retries = max(1, retries)
+    backoff = backoff_seconds if backoff_seconds is not None else int(os.getenv("GEMINI_RETRY_BACKOFF", "30"))
+    backoff = max(1, backoff)
 
-    result = response.json()
+    for attempt in range(retries):
+        response = requests.post(
+            url,
+            params={"key": api_key},
+            json=request_payload,
+            proxies=proxies,
+            timeout=120,
+        )
+        if response.status_code == 429:
+            if attempt < retries - 1:
+                wait_seconds = backoff * (attempt + 1)
+                print(f"Gemini API 返回 429，{wait_seconds}s 后重试（第 {attempt + 1}/{retries} 次）")
+                time.sleep(wait_seconds)
+                continue
+            raise SystemExit("Gemini API 返回 429（请求过多）。请稍后再试或检查配额。")
+        response.raise_for_status()
+        result = response.json()
+        break
+    else:
+        raise SystemExit("Gemini API 调用失败，已达到最大重试次数。")
+
     text_parts: List[str] = []
     for candidate in result.get("candidates", []):
         for part in candidate.get("content", {}).get("parts", []):

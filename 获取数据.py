@@ -311,10 +311,12 @@ def compute_signal_info(df: pd.DataFrame) -> Dict[str, Any]:
         ma_series = df[col]
         above = (df["close"] > ma_series).fillna(False)
         below = (df["close"] < ma_series).fillna(False)
-        stood_above = above & above.shift(1) & above.shift(2)
-        stood_above = stood_above & (~above.shift(3).fillna(False))
-        fell_below = below & below.shift(1) & below.shift(2)
-        fell_below = fell_below & (~below.shift(3).fillna(False))
+        stood_above = (above & above.shift(1) & above.shift(2)).fillna(False)
+        stood_above &= ~above.shift(3).fillna(False)
+        stood_above = stood_above.astype(bool)
+        fell_below = (below & below.shift(1) & below.shift(2)).fillna(False)
+        fell_below &= ~below.shift(3).fillna(False)
+        fell_below = fell_below.astype(bool)
         ma_status[window] = {
             "above": above,
             "below": below,
@@ -863,7 +865,7 @@ def plot_atr_percent(
 
     plt.figure(figsize=(12, 4))
     plt.plot(subset.index, subset[atr_pct_col], color="#ff6f00", linewidth=1.5)
-    plt.title(f"ETH ATR% (Period {period}) - 最近 {lookback} 天")
+    plt.title(f"ETH ATR% (Period {period}) - Last {lookback} Days")
     plt.ylabel("ATR%")
     plt.grid(True, alpha=0.25)
     plt.tight_layout()
