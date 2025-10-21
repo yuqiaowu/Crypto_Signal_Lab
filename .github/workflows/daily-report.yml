@@ -68,6 +68,7 @@ jobs:
           subject: "ETH 每日报告"
           from: "${{ secrets.MAIL_FROM }}"
           to: "${{ secrets.MAIL_TO }}"
+          convert_markdown: true
           html_body: file://deepseek_email_body.md
           attachments: |
             signals_60d.json
