@@ -44,16 +44,21 @@ jobs:
 
       - name: Run DeepSeek analysis
         env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           USE_LOCAL_PROXY: "0"
           HTTP_PROXY: ""
           HTTPS_PROXY: ""
         run: |
           python deepseek_analysis.py
+
       - name: Prepare email body fallback
+        if: always()
         run: |
           test -f deepseek_email_body.md || echo "DeepSeek 分析暂不可用（配额/网络限制）。请参考链上与ATR摘要附件。" > deepseek_email_body.md
           test -f deepseek_analysis.md || echo "# DeepSeek 分析报告\n\n(本次未生成，可能因配额或网络限制。)" > deepseek_analysis.md
+
       - name: Send email
+        if: always()
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: ${{ secrets.SMTP_SERVER }}
