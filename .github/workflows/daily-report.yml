@@ -31,6 +31,7 @@ jobs:
 
       - name: Generate datasets
         env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
           DEEPSEEK_MAX_RETRIES: "6"
@@ -42,8 +43,9 @@ jobs:
           python 获取数据.py
           python fetch_onchain_and_news.py
 
-      - name: Run DeepSeek analysis
+      - name: Run model analysis
         env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           USE_LOCAL_PROXY: "0"
           HTTP_PROXY: ""
@@ -54,8 +56,8 @@ jobs:
       - name: Prepare email body fallback
         if: always()
         run: |
-          test -f deepseek_email_body.md || echo "DeepSeek 分析暂不可用（配额/网络限制）。请参考链上数据与指标附件。" > deepseek_email_body.md
-          test -f deepseek_analysis.md || echo "# DeepSeek 分析报告\n\n(本次未生成，可能因配额或网络限制。)" > deepseek_analysis.md
+          test -f model_email_body.md || echo "模型分析暂不可用（配额/网络限制）。请参考链上数据与指标附件。" > model_email_body.md
+          test -f model_analysis.md || echo "# 模型分析报告\n\n(本次未生成，可能因配额或网络限制。)" > model_analysis.md
 
       - name: Send email
         if: always()
@@ -69,9 +71,9 @@ jobs:
           from: "${{ secrets.MAIL_FROM }}"
           to: "${{ secrets.MAIL_TO }}"
           convert_markdown: true
-          html_body: file://deepseek_email_body.md
+          html_body: file://model_email_body.md
           attachments: |
             signals_60d.json
             atr_metrics.json
-            deepseek_analysis.md
+            model_analysis.md
             eth_okx_daily.png

@@ -206,7 +206,7 @@ def call_deepseek(
                 print(f"DeepSeek API 返回 429，{wait_seconds}s 后重试（第 {attempt + 1}/{retries} 次）")
                 time.sleep(wait_seconds)
                 continue
-            raise SystemExit("DeepSeek API 返回 429（请求过多）。请稍后再试或检查配额。")
+            raise RuntimeError("DeepSeek API 返回 429（请求过多）。请稍后再试或检查配额。")
         if response.status_code >= 500 and attempt < retries - 1:
             wait_seconds = backoff * (attempt + 1)
             print(f"DeepSeek API 返回 {response.status_code}，{wait_seconds}s 后重试（第 {attempt + 1}/{retries} 次）")
@@ -219,7 +219,7 @@ def call_deepseek(
             except ValueError:
                 detail = response.text
             print(f"DeepSeek API 返回 400：{detail}")
-            return f"DeepSeek API 返回 400（请求无效）：{detail}"
+            raise RuntimeError(f"DeepSeek API 返回 400（请求无效）：{detail}")
         if response.status_code >= 400:
             try:
                 detail = response.json()
@@ -229,10 +229,10 @@ def call_deepseek(
         try:
             result = response.json()
         except ValueError as exc:
-            raise SystemExit(f"DeepSeek API 返回无法解析的内容：{response.text[:500]}") from exc
+            raise RuntimeError(f"DeepSeek API 返回无法解析的内容：{response.text[:500]}") from exc
         break
     else:
-        raise SystemExit("DeepSeek API 调用失败，已达到最大重试次数。")
+        raise RuntimeError("DeepSeek API 调用失败，已达到最大重试次数。")
 
     text_parts: List[str] = []
     choices = result.get("choices", [])
@@ -244,9 +244,84 @@ def call_deepseek(
     return "\n".join(text_parts).strip()
 
 
-def save_report(payload: Dict[str, Any], analysis_text: str, path: Path) -> None:
+def call_gemini(
+    api_key: str,
+    proxy: str | None,
+    payload: Dict[str, Any],
+    model: str | None = None,
+    max_retries: int | None = None,
+    backoff_seconds: int | None = None,
+) -> str:
+    model_name = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash-latest")
+    base_url = os.getenv(
+        "GEMINI_API_URL",
+        f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent",
+    )
+    proxies = {"http": proxy, "https": proxy} if proxy else None
+
+    parts = [
+        {"text": payload["instructions"]},
+        {
+            "text": "以下是最近60天的信号数据（JSON）：\n"
+            + json.dumps(payload["recent_data"], ensure_ascii=False, indent=2)
+        },
+    ]
+    for block in payload.get("extra_blocks", []):
+        parts.append({"text": str(block)})
+
+    request_payload = {"contents": [{"parts": parts}]}
+
+    retries = max_retries if max_retries is not None else int(os.getenv("GEMINI_MAX_RETRIES", "6"))
+    retries = max(1, retries)
+    backoff = backoff_seconds if backoff_seconds is not None else int(os.getenv("GEMINI_RETRY_BACKOFF", "60"))
+    backoff = max(1, backoff)
+
+    for attempt in range(retries):
+        response = requests.post(
+            base_url,
+            params={"key": api_key},
+            json=request_payload,
+            proxies=proxies,
+            timeout=120,
+        )
+        if response.status_code == 429:
+            if attempt < retries - 1:
+                wait_seconds = backoff * (attempt + 1)
+                print(f"Gemini API 返回 429，{wait_seconds}s 后重试（第 {attempt + 1}/{retries} 次）")
+                time.sleep(wait_seconds)
+                continue
+            raise RuntimeError("Gemini API 返回 429（请求过多）。请稍后再试或检查配额。")
+        if response.status_code >= 500 and attempt < retries - 1:
+            wait_seconds = backoff * (attempt + 1)
+            print(f"Gemini API 返回 {response.status_code}，{wait_seconds}s 后重试（第 {attempt + 1}/{retries} 次）")
+            time.sleep(wait_seconds)
+            continue
+        if response.status_code >= 400:
+            try:
+                detail = response.json()
+            except ValueError:
+                detail = response.text
+            raise RuntimeError(f"Gemini API 调用失败：{detail}")
+        try:
+            result = response.json()
+        except ValueError as exc:
+            raise RuntimeError(f"Gemini API 返回无法解析的内容：{response.text[:500]}") from exc
+        break
+    else:
+        raise RuntimeError("Gemini API 调用失败，已达到最大重试次数。")
+
+    text_parts: List[str] = []
+    for candidate in result.get("candidates", []):
+        for part in candidate.get("content", {}).get("parts", []):
+            text = part.get("text")
+            if text:
+                text_parts.append(text)
+    return "\n".join(text_parts).strip()
+
+
+def save_report(payload: Dict[str, Any], analysis_text: str, path: Path, model_label: str) -> None:
     with path.open("w", encoding="utf-8") as f:
-        f.write("# DeepSeek 分析报告\n\n")
+        f.write(f"# {model_label} 分析报告\n\n")
         f.write("## 提示内容\n\n")
         f.write(payload["instructions"] + "\n\n")
         f.write("## 最近60天信号数据 (JSON)\n\n")
@@ -270,7 +345,7 @@ def save_report(payload: Dict[str, Any], analysis_text: str, path: Path) -> None
             if onchain_json:
                 content = str(onchain_json).split("链上快照（JSON）：", 1)[1]
                 f.write("```json\n" + content + "\n```\n\n")
-        f.write("## DeepSeek 回复\n\n")
+        f.write(f"## {model_label} 回复\n\n")
         f.write(analysis_text or "(无回复)")
 
 
@@ -281,9 +356,10 @@ def save_email_body(analysis_text: str, path: Path) -> None:
 
 
 def main() -> None:
-    api_key = os.environ.get("DEEPSEEK_API_KEY")
-    if not api_key:
-        raise SystemExit("DEEPSEEK_API_KEY 未设置")
+    deepseek_key = os.environ.get("DEEPSEEK_API_KEY")
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    if not deepseek_key and not gemini_key:
+        raise SystemExit("未设置 DEEPSEEK_API_KEY 或 GEMINI_API_KEY，无法生成分析。")
 
     proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
     if proxy is not None:
@@ -302,10 +378,38 @@ def main() -> None:
     signals = load_signals(SIGNAL_FILE)
     onchain = load_onchain_snapshot(ONCHAIN_SNAPSHOT_FILE)
     payload = build_payload(signals, onchain)
-    analysis_text = call_deepseek(api_key=api_key, proxy=proxy, payload=payload)
-    save_report(payload, analysis_text, Path("deepseek_analysis.md"))
-    print("分析结果已写入 deepseek_analysis.md")
-    save_email_body(analysis_text, Path("deepseek_email_body.md"))
+    analysis_text = None
+    model_label = ""
+
+    if gemini_key:
+        try:
+            analysis_text = call_gemini(
+                api_key=gemini_key,
+                proxy=proxy,
+                payload=payload,
+            )
+            model_label = "Gemini"
+            if analysis_text:
+                print("使用 Gemini 生成分析。")
+            else:
+                print("Gemini 返回空响应，尝试回退 DeepSeek。")
+                analysis_text = None
+        except Exception as exc:
+            print(f"Gemini 调用失败：{exc}")
+
+    if analysis_text is None:
+        if not deepseek_key:
+            raise SystemExit("Gemini 调用失败且未配置 DeepSeek API Key。")
+        try:
+            analysis_text = call_deepseek(api_key=deepseek_key, proxy=proxy, payload=payload)
+            model_label = "DeepSeek"
+            print("使用 DeepSeek 生成分析。")
+        except Exception as exc:
+            raise SystemExit(f"DeepSeek 调用失败：{exc}") from exc
+
+    save_report(payload, analysis_text, Path("model_analysis.md"), model_label or "模型")
+    print("分析结果已写入 model_analysis.md")
+    save_email_body(analysis_text, Path("model_email_body.md"))
 
 
 if __name__ == "__main__":
