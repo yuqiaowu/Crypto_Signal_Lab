@@ -448,6 +448,7 @@ def plot_price_volume_rsi(
     show: bool = True,
     ma_windows: Optional[Iterable[int]] = None,
     plot_mas: bool = True,
+    atr_period: int = 14,
 ) -> None:
     """
     绘制收盘价 + 布林带、成交量、RSI 指标。
@@ -785,7 +786,27 @@ def plot_price_volume_rsi(
     ax_rsi.set_ylabel("RSI")
     ax_rsi.set_xlabel("Date")
     ax_rsi.set_ylim(0, 100)
-    ax_rsi.legend(loc="upper left")
+
+    atr_col = f"atr_pct_{atr_period}"
+    atr_series = df.get(atr_col)
+    legend_handles, legend_labels = ax_rsi.get_legend_handles_labels()
+    if atr_series is not None and isinstance(atr_series, pd.Series) and atr_series.notna().any():
+        ax_atr = ax_rsi.twinx()
+        atr_line, = ax_atr.plot(
+            df.index,
+            atr_series,
+            color="#ff8f00",
+            linewidth=1.2,
+            label=f"ATR% ({atr_period})",
+        )
+        ax_atr.set_ylabel("ATR%")
+        atr_max = float(atr_series.max(skipna=True))
+        ax_atr.set_ylim(0, atr_max * 1.2 if np.isfinite(atr_max) else 5)
+        ax_atr.grid(False)
+        legend_handles.append(atr_line)
+        legend_labels.append(f"ATR% ({atr_period})")
+
+    ax_rsi.legend(legend_handles, legend_labels, loc="upper left")
     ax_rsi.grid(True, linestyle="--", alpha=0.1)
 
     # 时间格式
@@ -829,8 +850,8 @@ def main() -> None:
         output_path="eth_okx_daily.png",
         ma_windows=ma_windows,
         plot_mas=False,
+        atr_period=14,
     )
-    plot_atr_percent(df, period=14, lookback=180, output_path="eth_atr_percent.png")
 
     latest = df.dropna().iloc[-1]
     prev_ratio = latest["prev_volume_ratio_ma_20"]
@@ -845,34 +866,6 @@ def main() -> None:
     print("布林带下轨斜率 5 日均值:", f"{bb_lower_slope_ma5:.2f}%")
     print("低位放量信号数量:", int(low_high_mask.sum()))
     print("高位放量信号数量:", int(high_high_mask.sum()))
-
-
-def plot_atr_percent(
-    df: pd.DataFrame,
-    period: int = 14,
-    lookback: int = 180,
-    output_path: str = "eth_atr_percent.png",
-) -> None:
-    """
-    绘制 ATR% 变化曲线。
-    """
-    atr_pct_col = f"atr_pct_{period}"
-    if atr_pct_col not in df:
-        raise ValueError(f"DataFrame 缺少 {atr_pct_col} 列，无法绘制 ATR%。")
-
-    subset = df.dropna(subset=[atr_pct_col]).tail(lookback)
-    if subset.empty:
-        raise ValueError("ATR 数据为空，无法绘图。")
-
-    plt.figure(figsize=(12, 4))
-    plt.plot(subset.index, subset[atr_pct_col], color="#ff6f00", linewidth=1.5)
-    plt.title(f"ETH ATR% (Period {period}) - Last {lookback} Days")
-    plt.ylabel("ATR%")
-    plt.grid(True, alpha=0.25)
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=160)
-    plt.close()
-    print(f"已保存 ATR% 图像至 {output_path}")
 
 
 if __name__ == "__main__":

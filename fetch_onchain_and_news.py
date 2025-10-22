@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from xml.etree import ElementTree
@@ -120,7 +121,6 @@ def _fetch_cryptocompare_news(
         "categories": categories,
         "lang": lang.upper(),
         "sortOrder": "latest",
-        "lTs": "",
     }
     data = _fetch_json(session, "https://min-api.cryptocompare.com/data/v2/news/", params)
     if isinstance(data, dict) and data.get("error"):
@@ -194,6 +194,126 @@ def _safe_float(value: Any) -> Optional[float]:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _safe_decimal(value: Any) -> Optional[Decimal]:
+    if value is None:
+        return None
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+
+
+def fetch_blockchair_eth_overview(session: requests.Session) -> Dict[str, Any]:
+    """
+    采用 gemini_advisor 中的方式，拉取 Blockchair Ethereum stats，提炼核心字段。
+    """
+    url = os.getenv("BLOCKCHAIR_STATS_URL", "https://api.blockchair.com/ethereum/stats")
+    headers = {
+        "User-Agent": os.getenv("BLOCKCHAIR_USER_AGENT", "eth-daily-report/0.1"),
+        "Accept": "application/json",
+    }
+    try:
+        resp = session.get(url, headers=headers, timeout=HTTP_TIMEOUT)
+        resp.raise_for_status()
+        payload = resp.json()
+    except requests.RequestException as exc:
+        return {"error": str(exc)}
+    data = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(data, dict):
+        return {"error": "invalid_response"}
+
+    result: Dict[str, Any] = {}
+    circulation = _safe_decimal(data.get("circulation_approximate"))
+    burned_total = _safe_decimal(data.get("burned"))
+    burned_24h = _safe_decimal(data.get("burned_24h"))
+    mempool_value = _safe_decimal(data.get("mempool_total_value_approximate"))
+
+    if circulation is not None:
+        result["circulation_eth"] = float(circulation / Decimal(10) ** 18)
+    if burned_total is not None:
+        result["burned_total_eth"] = float(burned_total / Decimal(10) ** 18)
+    if burned_24h is not None:
+        result["burned_24h_eth"] = float(burned_24h / Decimal(10) ** 18)
+    if mempool_value is not None:
+        result["mempool_value_eth"] = float(mempool_value / Decimal(10) ** 18)
+
+    def to_float(val: Any) -> Optional[float]:
+        try:
+            return float(val)
+        except (TypeError, ValueError):
+            return None
+
+    for key in (
+        "market_price_usd",
+        "market_price_usd_change_24h_percentage",
+        "market_cap_usd",
+        "mempool_tps",
+    ):
+        value = to_float(data.get(key))
+        if value is not None:
+            result[key] = value
+
+    transactions = data.get("mempool_transactions")
+    if isinstance(transactions, int):
+        result["mempool_transactions"] = transactions
+
+    fees = data.get("suggested_transaction_fee_gwei_options")
+    if isinstance(fees, dict):
+        result["suggested_fees_gwei"] = fees
+
+    return result
+
+
+def fetch_defillama_bridge_flows_simple(session: requests.Session) -> Dict[str, Any]:
+    """
+    采用 gemini_advisor 中的方式，统计最近 24h 的跨链体量及 Top ETH bridge。
+    """
+    url = os.getenv("DEFILLAMA_BRIDGES_URL", "https://bridges.llama.fi/bridges")
+    try:
+        resp = session.get(url, timeout=HTTP_TIMEOUT)
+        resp.raise_for_status()
+        payload = resp.json()
+    except requests.RequestException as exc:
+        return {"error": str(exc)}
+
+    bridges = payload.get("bridges") if isinstance(payload, dict) else None
+    if not isinstance(bridges, list):
+        return {"error": "invalid_response"}
+
+    eth_total = 0.0
+    btc_total = 0.0
+    eth_bridges: List[Dict[str, Any]] = []
+
+    for item in bridges:
+        if not isinstance(item, dict):
+            continue
+        volume_24h = item.get("last24hVolume")
+        try:
+            volume = float(volume_24h)
+        except (TypeError, ValueError):
+            continue
+        chains = item.get("chains") or []
+        chains_lower = {str(c).lower() for c in chains}
+        if "ethereum" in chains_lower:
+            eth_total += volume
+            eth_bridges.append(
+                {
+                    "name": item.get("displayName") or item.get("name"),
+                    "volume_24h_usd": volume,
+                    "chains": chains,
+                }
+            )
+        if "bitcoin" in chains_lower or "btc" in chains_lower:
+            btc_total += volume
+
+    eth_bridges.sort(key=lambda b: b["volume_24h_usd"], reverse=True)
+    return {
+        "eth_volume_24h_usd": eth_total if eth_total else None,
+        "btc_volume_24h_usd": btc_total if btc_total else None,
+        "top_eth_bridges": eth_bridges[:5],
+    }
 
 
 def _match_stablecoin_chain_entry(data: Dict[str, Any], chain_cap: str) -> Optional[Dict[str, Any]]:
@@ -789,6 +909,25 @@ def fetch_eth_gas_etherscan(session: requests.Session, api_key: Optional[str]) -
         },
     )
 
+    # Cloudflare JSON-RPC fallback (Etherscan V1 deprecated)
+    cf_fallback = None
+    if not isinstance(fee_history.get("result"), dict):
+        try:
+            cf_req = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "eth_feeHistory",
+                "params": [10, "latest", [10, 50, 90]],
+            }
+            cf_resp = session.post("https://cloudflare-eth.com", json=cf_req, timeout=HTTP_TIMEOUT)
+            cf = cf_resp.json()
+            if isinstance(cf.get("result"), dict):
+                cf_fallback = cf["result"]
+            else:
+                cf_fallback = {"error": cf.get("error"), "raw": cf}
+        except Exception as e:
+            cf_fallback = {"error": str(e)}
+
     gas_summary: Optional[Dict[str, Any]] = None
     if isinstance(gas_oracle.get("result"), dict):
         result = gas_oracle["result"]
@@ -808,6 +947,32 @@ def fetch_eth_gas_etherscan(session: requests.Session, api_key: Optional[str]) -
                 "suggest_base_fee": result.get("suggestBaseFee"),
                 "gas_used_ratio": result.get("gasUsedRatio"),
             }
+    elif isinstance(cf_fallback, dict) and cf_fallback and "baseFeePerGas" in cf_fallback:
+        base_fees = cf_fallback.get("baseFeePerGas", [])
+        gas_ratios = cf_fallback.get("gasUsedRatio", [])
+        rewards = cf_fallback.get("reward", [])
+        # last block metrics
+        last_base_hex = base_fees[-1] if base_fees else None
+        try:
+            base_gwei = int(last_base_hex, 16) / 1e9 if isinstance(last_base_hex, str) else None
+        except Exception:
+            base_gwei = None
+        last_reward = rewards[-1] if rewards else []
+        def hex_to_gwei(h):
+            try:
+                return int(h, 16) / 1e9
+            except Exception:
+                return None
+        pr10 = hex_to_gwei(last_reward[0]) if len(last_reward) > 0 else None
+        pr50 = hex_to_gwei(last_reward[1]) if len(last_reward) > 1 else None
+        pr90 = hex_to_gwei(last_reward[2]) if len(last_reward) > 2 else None
+        gas_summary = {
+            "safe_gwei": round((base_gwei or 0) + (pr10 or 0), 4) if base_gwei is not None else None,
+            "propose_gwei": round((base_gwei or 0) + (pr50 or 0), 4) if base_gwei is not None else None,
+            "fast_gwei": round((base_gwei or 0) + (pr90 or 0), 4) if base_gwei is not None else None,
+            "suggest_base_fee": base_gwei,
+            "gas_used_ratio": gas_ratios[-1] if gas_ratios else None,
+        }
 
     fee_points: List[Dict[str, Any]] = []
     if isinstance(fee_history.get("result"), dict):
@@ -834,8 +999,31 @@ def fetch_eth_gas_etherscan(session: requests.Session, api_key: Optional[str]) -
             "last_block": newest_block,
             "points": fee_points,
         }
+    elif isinstance(cf_fallback, dict) and cf_fallback and "baseFeePerGas" in cf_fallback:
+        base_fees = cf_fallback.get("baseFeePerGas", [])
+        gas_ratios = cf_fallback.get("gasUsedRatio", [])
+        rewards = cf_fallback.get("reward", [])
+        newest_block = cf_fallback.get("oldestBlock")
+        for idx, base_fee in enumerate(base_fees):
+            try:
+                base_fee_gwei = int(base_fee, 16) / 1e9
+            except (TypeError, ValueError):
+                base_fee_gwei = base_fee
+            reward_set = rewards[idx] if idx < len(rewards) else []
+            fee_points.append(
+                {
+                    "base_fee_gwei": round(base_fee_gwei, 4) if isinstance(base_fee_gwei, float) else base_fee_gwei,
+                    "gas_used_ratio": gas_ratios[idx] if idx < len(gas_ratios) else None,
+                    "priority_fee_percentiles": reward_set,
+                }
+            )
+        history_meta = {
+            "block_count": len(base_fees),
+            "last_block": newest_block,
+            "points": fee_points,
+        }
     else:
-        history_meta = {"error": fee_history.get("error"), "raw": fee_history}
+        history_meta = {"error": fee_history.get("error"), "raw": fee_history, "cf_fallback": cf_fallback}
 
     return {
         "gas_oracle_raw": gas_oracle,
@@ -931,7 +1119,17 @@ def _bridge_topN(flows: Dict[str, Any], top_n: int = 5) -> List[Dict[str, Any]]:
     } for p in protos_sorted[:top_n]]
 
 
-def build_daily_report(defi_eth: Dict[str, Any], defi_btc: Dict[str, Any], fear: Dict[str, Any], top_n: int = 5) -> Dict[str, Any]:
+def build_daily_report(
+    defi_eth: Dict[str, Any],
+    defi_btc: Dict[str, Any],
+    fear: Dict[str, Any],
+    eth_gas: Dict[str, Any],
+    btc_mempool: Dict[str, Any],
+    news: Dict[str, Any],
+    bridge_simple: Dict[str, Any] | None,
+    blockchair_overview: Dict[str, Any] | None,
+    top_n: int = 5,
+) -> Dict[str, Any]:
     def fmt_sc(sc: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         summ = sc.get("summary") if isinstance(sc, dict) else None
         latest = summ.get("latest") if isinstance(summ, dict) else None
@@ -946,34 +1144,124 @@ def build_daily_report(defi_eth: Dict[str, Any], defi_btc: Dict[str, Any], fear:
     eth_sum = defi_eth.get("bridge_summary")
     btc_sum = defi_btc.get("bridge_summary")
     fear_latest = fear.get("latest")
-    eth_latest_val = eth_sc.get('latest')
-    eth_latest_val = eth_latest_val.get('value') if isinstance(eth_latest_val, dict) else None
-    btc_latest_val = btc_sc.get('latest')
-    btc_latest_val = btc_latest_val.get('value') if isinstance(btc_latest_val, dict) else None
-    sc_para = (
-        f"稳定币 — ETH 最新: {eth_latest_val}, 环比: {eth_sc.get('change')}; "
-        f"BTC 最新: {btc_latest_val}, 环比: {btc_sc.get('change')}。"
-    )
-    eth_top_str = ", ".join([f"{p.get('name')}: {p.get('volume_1d')}" for p in eth_top])
-    btc_top_str = ", ".join([f"{p.get('name')}: {p.get('volume_1d')}" for p in btc_top])
-    bridges_para = (
-        f"桥接 — ETH 量 (1d/7d/30d): {tuple((eth_sum or {}).get(k) for k in ('volume_1d','volume_7d','volume_30d'))}; "
-        f"Top {top_n}: {eth_top_str}。 "
-        f"BTC 量 (1d/7d/30d): {tuple((btc_sum or {}).get(k) for k in ('volume_1d','volume_7d','volume_30d'))}; "
-        f"Top {top_n}: {btc_top_str}."
-    )
+    eth_latest_val = eth_sc.get("latest")
+    eth_latest_val = eth_latest_val.get("value") if isinstance(eth_latest_val, dict) else None
+    sc_para = f"稳定币 — ETH 最新: {eth_latest_val}, 环比: {eth_sc.get('change')}。"
+    bridge_para_parts: List[str] = []
+    if isinstance(bridge_simple, dict) and not bridge_simple.get("error"):
+        eth_24h = bridge_simple.get("eth_volume_24h_usd")
+        btc_24h = bridge_simple.get("btc_volume_24h_usd")
+        if eth_24h is not None or btc_24h is not None:
+            bridge_para_parts.append(
+                "24h 跨链资金流 — "
+                + ", ".join(
+                    part
+                    for part in (
+                        f"ETH {eth_24h:,.0f} USD" if isinstance(eth_24h, (int, float)) else None,
+                        f"BTC {btc_24h:,.0f} USD" if isinstance(btc_24h, (int, float)) else None,
+                    )
+                    if part
+                )
+            )
+        top_eth = bridge_simple.get("top_eth_bridges") or []
+        if top_eth:
+            top_str = ", ".join(
+                f"{item.get('name')}: {item.get('volume_24h_usd'):,}"
+                for item in top_eth
+                if isinstance(item, dict) and item.get("volume_24h_usd") is not None
+            )
+            if top_str:
+                bridge_para_parts.append(f"ETH Top Bridges: {top_str}")
+    else:
+        eth_top_str = ", ".join([f"{p.get('name')}: {p.get('volume_1d')}" for p in eth_top])
+        btc_top_str = ", ".join([f"{p.get('name')}: {p.get('volume_1d')}" for p in btc_top])
+        bridge_para_parts.append(
+            f"桥接 — ETH 量 (1d/7d/30d): {tuple((eth_sum or {}).get(k) for k in ('volume_1d','volume_7d','volume_30d'))}; "
+            f"Top {top_n}: {eth_top_str}。 "
+            f"BTC 量 (1d/7d/30d): {tuple((btc_sum or {}).get(k) for k in ('volume_1d','volume_7d','volume_30d'))}; "
+            f"Top {top_n}: {btc_top_str}."
+        )
+    bridges_para = "； ".join(bridge_para_parts)
     fear_para = (
         f"BTC 恐慌指数 — 最新值: {fear_latest.get('value') if isinstance(fear_latest, dict) else None}, "
         f"分类: {fear_latest.get('classification') if isinstance(fear_latest, dict) else None} (近 {len(fear.get('series') or [])} 天)。"
     )
+    eth_gas_summary = eth_gas.get("gas_oracle_summary") if isinstance(eth_gas, dict) else None
+    btc_fee = btc_mempool.get("recommended_fees") if isinstance(btc_mempool, dict) else None
+    queue_metrics = btc_mempool.get("queue_metrics") if isinstance(btc_mempool, dict) else None
+    gas_para_items: List[str] = []
+    if isinstance(eth_gas_summary, dict):
+        gas_para_items.append(
+            "ETH Gas: "
+            + ", ".join(
+                [
+                    f"安全 {eth_gas_summary.get('safe_gwei')} gwei",
+                    f"提议 {eth_gas_summary.get('propose_gwei')} gwei",
+                    f"快速 {eth_gas_summary.get('fast_gwei')} gwei",
+                    f"基础费 {eth_gas_summary.get('suggest_base_fee')} gwei",
+                ]
+            )
+        )
+    if isinstance(btc_fee, dict):
+        gas_para_items.append(
+            "BTC 推荐费率: "
+            + ", ".join(
+                [
+                    f"最低 {btc_fee.get('minimumFee')} sat/vB",
+                    f"经济 {btc_fee.get('economyFee')} sat/vB",
+                    f"正常 {btc_fee.get('normalFee')} sat/vB",
+                    f"优先 {btc_fee.get('priorityFee')} sat/vB",
+                ]
+            )
+        )
+    if isinstance(queue_metrics, dict):
+        gas_para_items.append(
+            "BTC Mempool 队列: "
+            + ", ".join(
+                [
+                    f"交易数 {queue_metrics.get('count')}",
+                    f"体积 {queue_metrics.get('vsize')} vBytes",
+                    f"累计费 {queue_metrics.get('total_fee')} sat",
+                ]
+            )
+        )
+    if isinstance(blockchair_overview, dict) and not blockchair_overview.get("error"):
+        mempool_value = blockchair_overview.get("mempool_value_eth")
+        burned_24h = blockchair_overview.get("burned_24h_eth")
+        price_change = blockchair_overview.get("market_price_usd_change_24h_percentage")
+        mempool_tx = blockchair_overview.get("mempool_transactions")
+        fees = blockchair_overview.get("suggested_fees_gwei")
+        parts = []
+        if isinstance(mempool_value, (int, float)):
+            parts.append(f"ETH Mempool 价值 {mempool_value:,.0f} ETH")
+        if isinstance(burned_24h, (int, float)):
+            parts.append(f"近24h 烧毁 {burned_24h:,.1f} ETH")
+        if isinstance(price_change, (int, float)):
+            parts.append(f"24h 价格变动 {price_change:+.2f}%")
+        if isinstance(mempool_tx, int):
+            parts.append(f"待处理交易 {mempool_tx}")
+        if isinstance(fees, dict):
+            priority = fees.get("priority")
+            if priority is not None:
+                parts.append(f"Blockchair 建议费 {priority} gwei")
+        if parts:
+            gas_para_items.append("Blockchair 概览: " + ", ".join(parts))
+    gas_para = "；".join(gas_para_items) if gas_para_items else None
+
     return {
-        "stablecoins": {"ethereum": eth_sc, "bitcoin": btc_sc, "paragraph": sc_para},
+        "stablecoins": {"ethereum": eth_sc, "paragraph": sc_para},
         "bridges": {
             "ethereum": {"summary": eth_sum, "top": eth_top},
             "bitcoin": {"summary": btc_sum, "top": btc_top},
             "paragraph": bridges_para,
         },
         "fear_greed": {"series": fear.get("series"), "latest": fear_latest, "paragraph": fear_para},
+        "gas": {
+            "ethereum": eth_gas_summary,
+            "bitcoin": {"recommended": btc_fee, "queue": queue_metrics},
+            "paragraph": gas_para,
+        },
+        "news": news,
     }
 
 
@@ -987,8 +1275,20 @@ def aggregate_snapshot(session: requests.Session) -> Dict[str, Any]:
     eth_gas = fetch_eth_gas_etherscan(session, os.environ.get("ETHERSCAN_API_KEY"))
     news = gather_news(session)
     fear_greed = fetch_fear_greed_index(session, limit=15)
+    blockchair_overview = fetch_blockchair_eth_overview(session)
+    bridge_simple = fetch_defillama_bridge_flows_simple(session)
     bridge_top_n = int(os.getenv("BRIDGE_TOP_N", "5"))
-    daily_report = build_daily_report(ethereum_flows, bitcoin_flows, fear_greed, top_n=bridge_top_n)
+    daily_report = build_daily_report(
+        ethereum_flows,
+        bitcoin_flows,
+        fear_greed,
+        eth_gas,
+        btc_mempool,
+        news,
+        bridge_simple,
+        blockchair_overview,
+        top_n=bridge_top_n,
+    )
 
     return {
         "generated_at": timestamp,
@@ -1004,6 +1304,8 @@ def aggregate_snapshot(session: requests.Session) -> Dict[str, Any]:
         "eth_gas": eth_gas,
         "news": news,
         "fear_greed": fear_greed,
+        "blockchair_overview": blockchair_overview,
+        "bridge_summary_24h": bridge_simple,
         "daily_report": daily_report,
     }
 
@@ -1077,10 +1379,11 @@ def build_daily_report(defi_eth: Dict[str, Any], defi_btc: Dict[str, Any], fear:
     eth_sum = defi_eth.get("bridge_summary")
     btc_sum = defi_btc.get("bridge_summary")
     fear_latest = fear.get("latest")
-    sc_para = (
-        f"稳定币 — ETH 最新: {eth_sc.get('latest', {}).get('value')}, 环比: {eth_sc.get('change')}; "
-        f"BTC 最新: {btc_sc.get('latest', {}).get('value')}, 环比: {btc_sc.get('change')}。"
-    )
+    eth_latest_val = eth_sc.get('latest')
+    eth_latest_val = eth_latest_val.get('value') if isinstance(eth_latest_val, dict) else None
+    btc_latest_val = btc_sc.get('latest') if isinstance(btc_sc, dict) else None
+    btc_latest_val = btc_latest_val.get('value') if isinstance(btc_latest_val, dict) else None
+    sc_para = f"稳定币 — ETH 最新: {eth_latest_val}, 环比: {eth_sc.get('change')}。"
     eth_top_str = ", ".join([f"{p.get('name')}: {p.get('volume_1d')}" for p in eth_top])
     btc_top_str = ", ".join([f"{p.get('name')}: {p.get('volume_1d')}" for p in btc_top])
     bridges_para = (

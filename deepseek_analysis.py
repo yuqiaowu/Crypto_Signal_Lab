@@ -9,7 +9,6 @@ from typing import Any, Dict, List
 import requests
 
 SIGNAL_FILE = Path("signals_60d.json")
-VOLATILITY_FILE = Path("atr_metrics.json")
 ONCHAIN_SNAPSHOT_FILE = Path("global_onchain_news_snapshot.json")
 
 
@@ -17,15 +16,6 @@ def load_signals(path: Path) -> List[Dict[str, Any]]:
     if not path.exists():
         raise SystemExit(
             f"未找到 {path}。请先运行 `python 获取数据.py` 生成信号数据，再执行本脚本。"
-        )
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def load_volatility(path: Path) -> Dict[str, Any]:
-    if not path.exists():
-        raise SystemExit(
-            f"未找到 {path}。请先运行 `python 获取数据.py` 生成 ATR 数据，再执行本脚本。"
         )
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
@@ -99,12 +89,20 @@ def build_onchain_parts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
 
     news_summary = None
     dr_news = dr.get("news") if isinstance(dr, dict) else None
-    if isinstance(dr_news, dict):
-        news_summary = dr_news.get("paragraph")
 
     extra_blocks: List[str] = []
-    # 移除超大 JSON 以避免上下文超限：不再附加完整链上快照
-    # extra_blocks.append("链上快照（JSON）：\n" + json.dumps(snapshot, ensure_ascii=False, indent=2))
+    if stable_para:
+        extra_blocks.append("稳定币摘要：" + str(stable_para))
+    if bridge_para:
+        extra_blocks.append("跨链桥接摘要：" + str(bridge_para))
+    if fear_para:
+        extra_blocks.append("恐慌指数摘要：" + str(fear_para))
+    if gas_para:
+        extra_blocks.append("Gas/Mempool 摘要：" + str(gas_para))
+    if isinstance(dr_news, dict):
+        extra_blocks.append(
+            "新闻原始数据（JSON）：\n" + json.dumps(dr_news, ensure_ascii=False, indent=2)
+        )
     return {
         "extra_blocks": extra_blocks,
         "paragraphs": {
@@ -120,7 +118,6 @@ def build_onchain_parts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
 def build_payload(
     signals: List[Dict[str, Any]],
     onchain: Dict[str, Any] | None = None,
-    volatility: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     instructions = """
 你是一名资深的币圈投资分析师。以下数据仅包含最近60天已收盘的日线，请基于下列规则严格分析，并给出买入/卖出建议：
@@ -131,13 +128,14 @@ def build_payload(
 5. 数据中已为每个交易日计算买入/卖出星级（0~3星，分别基于 RSI、放量、DMI 叠加），请结合星级及其他指标作出具体建议，并说明理由。
 6. 请判断是否“有效站上/跌破关键均线”，并给出依据：默认关注 MA20/MA60/MA120/MA180；“有效”的定义为价格至少连续3天在均线之上/之下，同时量能不低于均量（以 `volume_ratio_ma20` 为准；≥1.0 为基本支持，≥1.5 为较强支持）。
 请输出：
-- 对当前市场趋势的综合概述（布林带、均线、量能等）。
-- 买入/卖出信号的星级解释（对应日期，说明为何给出该星级，是否符合上述规则）。
-- 若存在明显的支撑位/压力位，请给出对应的价格区域。
-- 请给出短期（1-2 周）和中期（1-2 月）的操作建议。
-- 提醒潜在风险或需要关注的指标变化。
-- 结合 ATR% 的走势说明波动率水平（是否升高/走低），并讨论波动率对策略择时的影响。
-- 结合链上资金流（稳定币、桥接）、Gas/Mempool、恐慌指数与新闻要点，说明市场情绪与流动性走向，并评价其对价格趋势的支撑或掣肘。
+- 按以下标题输出详细内容（无须额外说明）：
+  1. 《市场概述》——布林带、均线、量能综合评价。
+  2. 《信号解读》——列出买入/卖出星级及理由，指明是否符合规则。
+  3. 《关键价位》——若存在重要支撑/压力，请给出现价或区间。
+  4. 《操作建议》——分别给出短期（1-2 周）与中期（1-2 月）策略。
+  5. 《风险与关注》——提示潜在风险以及需要观测的指标变化。
+  6. 《波动率观察》——解析 ATR% 的趋势与对策略的影响。
+  7. 《链上与情绪》——分别引用稳定币、桥接、Gas/Mempool、恐慌指数与新闻数据的具体数值，分析其含义及对价格/策略的影响；如某项缺失须说明原因。
 """.strip()
 
     payload: Dict[str, Any] = {
@@ -149,7 +147,6 @@ def build_payload(
         oc = build_onchain_parts(onchain)
         payload["extra_blocks"].extend(oc.get("extra_blocks", []))
         payload["onchain_paragraphs"] = oc.get("paragraphs", {})
-    payload["volatility"] = volatility or {}
     return payload
 
 
@@ -273,13 +270,6 @@ def save_report(payload: Dict[str, Any], analysis_text: str, path: Path) -> None
             if onchain_json:
                 content = str(onchain_json).split("链上快照（JSON）：", 1)[1]
                 f.write("```json\n" + content + "\n```\n\n")
-        if payload.get("volatility"):
-            f.write("## ATR 波动率数据 (JSON)\n\n")
-            f.write(
-                "```json\n"
-                + json.dumps(payload["volatility"], ensure_ascii=False, indent=2)
-                + "\n```\n\n"
-            )
         f.write("## DeepSeek 回复\n\n")
         f.write(analysis_text or "(无回复)")
 
@@ -310,9 +300,8 @@ def main() -> None:
             os.environ.pop(key, None)
 
     signals = load_signals(SIGNAL_FILE)
-    volatility = load_volatility(VOLATILITY_FILE)
     onchain = load_onchain_snapshot(ONCHAIN_SNAPSHOT_FILE)
-    payload = build_payload(signals, onchain, volatility)
+    payload = build_payload(signals, onchain)
     analysis_text = call_deepseek(api_key=api_key, proxy=proxy, payload=payload)
     save_report(payload, analysis_text, Path("deepseek_analysis.md"))
     print("分析结果已写入 deepseek_analysis.md")
