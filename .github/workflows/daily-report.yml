@@ -51,7 +51,7 @@ jobs:
           HTTP_PROXY: ""
           HTTPS_PROXY: ""
         run: |
-          python deepseek_analysis.py
+          python model_analysis.py
 
       - name: Prepare email body fallback
         if: always()

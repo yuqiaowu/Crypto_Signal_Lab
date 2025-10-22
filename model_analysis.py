@@ -252,10 +252,11 @@ def call_gemini(
     max_retries: int | None = None,
     backoff_seconds: int | None = None,
 ) -> str:
-    model_name = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash-latest")
+    model_name = model or os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+    api_version = os.getenv("GEMINI_API_VERSION", "v1")
     base_url = os.getenv(
         "GEMINI_API_URL",
-        f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent",
+        f"https://generativelanguage.googleapis.com/{api_version}/models/{model_name}:generateContent",
     )
     proxies = {"http": proxy, "https": proxy} if proxy else None
 
