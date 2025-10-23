@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -203,6 +204,206 @@ def _safe_decimal(value: Any) -> Optional[Decimal]:
         return Decimal(str(value))
     except (InvalidOperation, TypeError, ValueError):
         return None
+
+
+def fetch_okx_open_interest_volume(
+    session: requests.Session,
+    ccy: str = "ETH",
+    inst_type: str = "SWAP",
+    period: str = "1D",
+    limit: int = 90,
+) -> Dict[str, Any]:
+    """
+    拉取 OKX Rubik 永续合约开仓量与成交额历史。
+    """
+    url = "https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume"
+    params = {
+        "ccy": ccy,
+        "instType": inst_type,
+        "period": period,
+        "limit": str(limit),
+    }
+    try:
+        resp = session.get(url, params=params, timeout=HTTP_TIMEOUT)
+        resp.raise_for_status()
+    except requests.RequestException as exc:
+        return {"error": str(exc), "url": url, "params": params}
+    try:
+        payload = resp.json()
+    except ValueError:
+        return {"error": "invalid_json", "url": url, "params": params}
+    if isinstance(payload, dict) and payload.get("code") not in (None, "0"):
+        return {"error": payload.get("msg") or payload.get("error_message"), "url": url, "params": params, "raw": payload}
+
+    data_rows = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(data_rows, list):
+        return {"error": "missing_data", "url": url, "params": params, "raw": payload}
+
+    series: List[Dict[str, Any]] = []
+    for row in data_rows:
+        if not isinstance(row, (list, tuple)) or len(row) < 3:
+            continue
+        ts_raw, oi_raw, vol_raw = row[:3]
+        try:
+            ts = int(ts_raw)
+            oi_val = float(oi_raw)
+            vol_val = float(vol_raw)
+        except (TypeError, ValueError):
+            continue
+        dt = datetime.fromtimestamp(ts / 1000, tz=timezone.utc)
+        series.append(
+            {
+                "timestamp": dt.isoformat(),
+                "date_cn": dt.astimezone(timezone(timedelta(hours=8))).strftime("%Y-%m-%d"),
+                "open_interest_usd": round(oi_val, 2),
+                "perp_volume_usd": round(vol_val, 2),
+            }
+        )
+    series.sort(key=lambda x: x["timestamp"])
+
+    latest = series[-1] if series else None
+    prev = series[-2] if len(series) >= 2 else None
+    change_pct = None
+    if latest and prev and prev.get("open_interest_usd"):
+        try:
+            change_pct = round(
+                (latest["open_interest_usd"] - prev["open_interest_usd"]) / prev["open_interest_usd"] * 100,
+                2,
+            )
+        except ZeroDivisionError:
+            change_pct = None
+
+    return {
+        "series": series,
+        "latest": latest,
+        "previous": prev,
+        "change_pct": change_pct,
+        "params": params,
+    }
+
+
+def fetch_okx_liquidation_summary(
+    session: requests.Session,
+    uly: str = "ETH-USDT",
+    inst_type: str = "SWAP",
+    hours: int = 48,
+    batch_limit: int = 100,
+) -> Dict[str, Any]:
+    """
+    拉取 OKX 永续合约爆仓订单并按日聚合多空名义金额。
+    """
+    url = "https://www.okx.com/api/v5/public/liquidation-orders"
+    cutoff_ts = datetime.now(timezone.utc) - timedelta(hours=hours)
+    cutoff_ms = int(cutoff_ts.timestamp() * 1000)
+    after: Optional[str] = None
+    collected: List[Dict[str, Any]] = []
+    seen: set[int] = set()
+
+    for _ in range(300):
+        params: Dict[str, Any] = {
+            "instType": inst_type,
+            "uly": uly,
+            "state": "filled",
+            "limit": str(batch_limit),
+        }
+        if after:
+            params["after"] = after
+        try:
+            resp = session.get(url, params=params, timeout=HTTP_TIMEOUT)
+            resp.raise_for_status()
+        except requests.RequestException as exc:
+            return {"error": str(exc), "url": url, "params": params}
+        try:
+            payload = resp.json()
+        except ValueError:
+            return {"error": "invalid_json", "url": url, "params": params}
+        if isinstance(payload, dict) and payload.get("code") not in (None, "0"):
+            return {"error": payload.get("msg") or payload.get("error_message"), "url": url, "params": params, "raw": payload}
+
+        data_entries = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(data_entries, list):
+            break
+        details: List[Dict[str, Any]] = []
+        for entry in data_entries:
+            entry_details = entry.get("details") if isinstance(entry, dict) else None
+            if isinstance(entry_details, list):
+                details.extend(entry_details)
+        if not details:
+            break
+        oldest_ts: Optional[int] = None
+        for detail in details:
+            ts_raw = detail.get("ts") or detail.get("time")
+            try:
+                ts = int(ts_raw)
+            except (TypeError, ValueError):
+                continue
+            if ts in seen:
+                continue
+            seen.add(ts)
+            if oldest_ts is None or ts < oldest_ts:
+                oldest_ts = ts
+            if ts < cutoff_ms:
+                continue
+            side = (detail.get("posSide") or detail.get("side") or "").strip().lower()
+            if side not in {"long", "short"}:
+                continue
+            try:
+                size = float(detail.get("sz", 0))
+            except (TypeError, ValueError):
+                size = 0.0
+            bk_px = detail.get("bkPx")
+            try:
+                price = float(bk_px)
+            except (TypeError, ValueError):
+                price = None
+            notional = size * price if price is not None else None
+            collected.append(
+                {
+                    "ts": ts,
+                    "side": side,
+                    "size": size,
+                    "notional_usd": notional,
+                }
+            )
+        if oldest_ts is None or len(details) < batch_limit:
+            break
+        after = str(oldest_ts - 1)
+
+    aggregated: Dict[str, Dict[str, float]] = defaultdict(lambda: {"long": 0.0, "short": 0.0})
+    for item in collected:
+        ts = item["ts"]
+        dt = datetime.fromtimestamp(ts / 1000, tz=timezone.utc).astimezone(timezone(timedelta(hours=8)))
+        day_key = dt.strftime("%Y-%m-%d")
+        side = item["side"]
+        value = float(item.get("notional_usd") or 0.0)
+        aggregated[day_key][side] += value
+
+    series = []
+    for day, values in sorted(aggregated.items()):
+        series.append(
+            {
+                "date": day,
+                "long_liquidations_usd": round(values.get("long", 0.0), 2),
+                "short_liquidations_usd": round(values.get("short", 0.0), 2),
+            }
+        )
+
+    totals = {
+        "long_usd": round(sum(v["long_liquidations_usd"] for v in series), 2),
+        "short_usd": round(sum(v["short_liquidations_usd"] for v in series), 2),
+    }
+
+    return {
+        "series": series,
+        "totals": totals,
+        "params": {
+            "uly": uly,
+            "instType": inst_type,
+            "hours": hours,
+            "batch_limit": batch_limit,
+        },
+        "records": len(collected),
+    }
 
 
 def fetch_blockchair_eth_overview(session: requests.Session) -> Dict[str, Any]:
@@ -1276,6 +1477,8 @@ def aggregate_snapshot(session: requests.Session) -> Dict[str, Any]:
     news = gather_news(session)
     fear_greed = fetch_fear_greed_index(session, limit=15)
     blockchair_overview = fetch_blockchair_eth_overview(session)
+    eth_open_interest = fetch_okx_open_interest_volume(session, ccy="ETH", inst_type="SWAP", period="1D", limit=120)
+    eth_liquidations = fetch_okx_liquidation_summary(session, uly="ETH-USDT", inst_type="SWAP", hours=72)
     bridge_simple = fetch_defillama_bridge_flows_simple(session)
     bridge_top_n = int(os.getenv("BRIDGE_TOP_N", "5"))
     daily_report = build_daily_report(
@@ -1306,6 +1509,12 @@ def aggregate_snapshot(session: requests.Session) -> Dict[str, Any]:
         "fear_greed": fear_greed,
         "blockchair_overview": blockchair_overview,
         "bridge_summary_24h": bridge_simple,
+        "derivatives": {
+            "okx": {
+                "eth_open_interest_volume": eth_open_interest,
+                "eth_liquidations": eth_liquidations,
+            }
+        },
         "daily_report": daily_report,
     }
 

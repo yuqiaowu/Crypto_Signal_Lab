@@ -90,6 +90,69 @@ def build_onchain_parts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
     news_summary = None
     dr_news = dr.get("news") if isinstance(dr, dict) else None
 
+    def _format_usd(value: Any) -> str:
+        try:
+            num = float(value)
+        except (TypeError, ValueError):
+            return "N/A"
+        abs_num = abs(num)
+        if abs_num >= 1e9:
+            return f"{num / 1e9:.2f}B"
+        if abs_num >= 1e6:
+            return f"{num / 1e6:.1f}M"
+        if abs_num >= 1e3:
+            return f"{num / 1e3:.1f}K"
+        return f"{num:.0f}"
+
+    derivatives = snapshot.get("derivatives") if isinstance(snapshot, dict) else None
+    derivatives_okx = derivatives.get("okx") if isinstance(derivatives, dict) else None
+    oi_data = derivatives_okx.get("eth_open_interest_volume") if isinstance(derivatives_okx, dict) else None
+    liq_data = derivatives_okx.get("eth_liquidations") if isinstance(derivatives_okx, dict) else None
+    derivatives_para_parts: List[str] = []
+
+    if isinstance(oi_data, dict):
+        latest = oi_data.get("latest")
+        prev = oi_data.get("previous")
+        change_pct = oi_data.get("change_pct")
+        if isinstance(latest, dict):
+            date_str = latest.get("date_cn") or latest.get("timestamp")
+            oi_val = latest.get("open_interest_usd")
+            vol_val = latest.get("perp_volume_usd")
+            piece = f"OKX 永续开仓量（{date_str}）≈ {_format_usd(oi_val)} USD"
+            if change_pct is not None:
+                piece += f" ({change_pct:+.2f}% d/d)"
+            elif isinstance(prev, dict) and prev.get("open_interest_usd"):
+                try:
+                    diff = float(oi_val) - float(prev.get("open_interest_usd"))
+                    piece += f" (较前日变动 {_format_usd(diff)})"
+                except (TypeError, ValueError):
+                    pass
+            if vol_val is not None:
+                piece += f"，当日永续成交额 {_format_usd(vol_val)} USD"
+            derivatives_para_parts.append(piece)
+        elif oi_data.get("error"):
+            derivatives_para_parts.append(f"OKX 开仓量获取失败: {oi_data.get('error')}")
+
+    if isinstance(liq_data, dict):
+        series = liq_data.get("series")
+        totals = liq_data.get("totals")
+        if isinstance(series, list) and series:
+            latest_liq = series[-1]
+            latest_piece = (
+                f"最近爆仓（{latest_liq.get('date')}）多头 {_format_usd(latest_liq.get('long_liquidations_usd'))} USD，"
+                f"空头 {_format_usd(latest_liq.get('short_liquidations_usd'))} USD"
+            )
+            derivatives_para_parts.append(latest_piece)
+        if isinstance(totals, dict) and derivatives_para_parts:
+            totals_piece = (
+                f"样本区间合计：多头 {_format_usd(totals.get('long_usd'))} USD，空头 {_format_usd(totals.get('short_usd'))} USD"
+            )
+            derivatives_para_parts.append(totals_piece)
+        if liq_data.get("error"):
+            derivatives_para_parts.append(f"爆仓数据获取失败: {liq_data.get('error')}")
+
+    derivatives_para = "； ".join(derivatives_para_parts) if derivatives_para_parts else None
+
     extra_blocks: List[str] = []
     if stable_para:
         extra_blocks.append("稳定币摘要：" + str(stable_para))
@@ -103,6 +166,10 @@ def build_onchain_parts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
         extra_blocks.append(
             "新闻原始数据（JSON）：\n" + json.dumps(dr_news, ensure_ascii=False, indent=2)
         )
+    if derivatives_para:
+        extra_blocks.append("衍生品摘要：" + derivatives_para)
+    if isinstance(derivatives_okx, dict):
+        extra_blocks.append("衍生品原始数据（OKX）：\n" + json.dumps(derivatives_okx, ensure_ascii=False, indent=2))
     return {
         "extra_blocks": extra_blocks,
         "paragraphs": {
@@ -111,6 +178,7 @@ def build_onchain_parts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
             "fear": fear_para,
             "gas": gas_para,
             "news": news_summary,
+            "derivatives": derivatives_para,
         },
     }
 
@@ -135,7 +203,7 @@ def build_payload(
   4. 《操作建议》——分别给出短期（1-2 周）与中期（1-2 月）策略。
   5. 《风险与关注》——提示潜在风险以及需要观测的指标变化。
   6. 《波动率观察》——解析 ATR% 的趋势与对策略的影响。
-  7. 《链上与情绪》——分别引用稳定币、桥接、Gas/Mempool、恐慌指数与新闻数据的具体数值，分析其含义及对价格/策略的影响；如某项缺失须说明原因。
+  7. 《链上与情绪》——分别引用稳定币、桥接、Gas/Mempool、恐慌指数、新闻数据以及衍生品指标（OKX 永续开仓量与多空爆仓）的具体数值，分析其含义及对价格/策略的影响；如某项缺失须说明原因。
 """.strip()
 
     payload: Dict[str, Any] = {

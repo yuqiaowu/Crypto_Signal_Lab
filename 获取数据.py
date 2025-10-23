@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
 import json
 import time
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, List, Optional
 
 import ccxt
@@ -15,6 +15,51 @@ from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
 import os
+import requests
+
+
+HTTP_TIMEOUT = int(os.getenv("HTTP_TIMEOUT", "30"))
+
+
+def resolve_proxy(proxy_url: Optional[str] = None) -> Optional[str]:
+    """
+    Resolve proxy configuration from explicit argument, environment variables, or local defaults.
+    """
+    if proxy_url:
+        proxy_url = proxy_url.strip()
+        if proxy_url:
+            return proxy_url
+    env_proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
+    if env_proxy:
+        env_proxy = env_proxy.strip()
+        if env_proxy:
+            return env_proxy
+    use_local = os.environ.get("USE_LOCAL_PROXY", "0").lower() in {"1", "true", "yes"}
+    if use_local:
+        return "http://127.0.0.1:7890"
+    return None
+
+
+def make_okx_request(path: str, params: Dict[str, Any], proxy_url: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Call OKX REST API and return parsed JSON payload, raising on transport or API errors.
+    """
+    base_url = "https://www.okx.com"
+    session_params: Dict[str, Any] = {
+        "params": params,
+        "timeout": HTTP_TIMEOUT,
+    }
+    proxy = resolve_proxy(proxy_url)
+    if proxy:
+        session_params["proxies"] = {"http": proxy, "https": proxy}
+    response = requests.get(f"{base_url}{path}", **session_params)
+    response.raise_for_status()
+    payload = response.json()
+    if isinstance(payload, dict) and payload.get("code") not in (None, "0"):
+        code = payload.get("code")
+        message = payload.get("msg") or payload.get("error_message") or payload
+        raise RuntimeError(f"OKX API error {code}: {message}")
+    return payload
 
 
 def build_exchange(proxy_url: Optional[str] = None) -> ccxt.okx:
@@ -25,19 +70,11 @@ def build_exchange(proxy_url: Optional[str] = None) -> ccxt.okx:
     settings: Dict[str, object] = {
         "enableRateLimit": True,
     }
-    # 自动识别代理：优先使用传入的 proxy_url；否则读取环境变量
-    if not proxy_url:
-        env_proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
-        if env_proxy:
-            proxy_url = env_proxy.strip()
-        else:
-            use_local = os.environ.get("USE_LOCAL_PROXY", "0").lower() in {"1", "true", "yes"}
-            if use_local:
-                proxy_url = "http://127.0.0.1:7890"
-    if proxy_url:
+    proxy = resolve_proxy(proxy_url)
+    if proxy:
         settings["proxies"] = {
-            "http": proxy_url,
-            "https": proxy_url,
+            "http": proxy,
+            "https": proxy,
         }
     return ccxt.okx(settings)
 
@@ -91,6 +128,181 @@ def fetch_daily_ohlcv(
     df = df.set_index("datetime").drop(columns=["timestamp"])
     df = df.sort_index()
     return df
+
+
+def fetch_open_interest_volume_history(
+    ccy: str = "ETH",
+    inst_type: str = "SWAP",
+    period: str = "1D",
+    limit: int = 180,
+    proxy_url: Optional[str] = None,
+) -> pd.DataFrame:
+    """
+    Fetch historical open interest (USD) and perp volume (USD) from OKX Rubik statistics API.
+    """
+    params = {
+        "ccy": ccy,
+        "instType": inst_type,
+        "period": period,
+        "limit": str(limit),
+    }
+    payload = make_okx_request(
+        "/api/v5/rubik/stat/contracts/open-interest-volume",
+        params,
+        proxy_url=proxy_url,
+    )
+    rows = payload.get("data", []) if isinstance(payload, dict) else []
+    records: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, (list, tuple)) or len(row) < 3:
+            continue
+        ts_raw, oi_usd_raw, volume_usd_raw = row[:3]
+        try:
+            ts = int(ts_raw)
+            oi_usd = float(oi_usd_raw)
+            volume_usd = float(volume_usd_raw)
+        except (TypeError, ValueError):
+            continue
+        dt = pd.to_datetime(ts, unit="ms", utc=True).tz_convert("Asia/Shanghai")
+        records.append(
+            {
+                "datetime": dt,
+                "open_interest_usd": oi_usd,
+                "perp_volume_usd": volume_usd,
+            }
+        )
+    if not records:
+        return pd.DataFrame(columns=["open_interest_usd", "perp_volume_usd"])
+    df = pd.DataFrame(records).set_index("datetime").sort_index()
+    df["open_interest_usd_change_pct"] = df["open_interest_usd"].pct_change() * 100
+    df["perp_volume_usd_change_pct"] = df["perp_volume_usd"].pct_change() * 100
+    return df
+
+
+def fetch_liquidation_aggregates(
+    uly: str = "ETH-USDT",
+    inst_type: str = "SWAP",
+    hours: int = 24 * 14,
+    proxy_url: Optional[str] = None,
+    batch_limit: int = 100,
+) -> pd.DataFrame:
+    """
+    Fetch liquidation records from OKX and aggregate by day and position side.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+    cutoff_ms = int(cutoff.timestamp() * 1000)
+    records: list[dict[str, Any]] = []
+    after: Optional[str] = None
+    seen: set[int] = set()
+    max_batches = 500
+    for _ in range(max_batches):
+        params = {
+            "instType": inst_type,
+            "uly": uly,
+            "state": "filled",
+            "limit": str(batch_limit),
+        }
+        if after:
+            params["after"] = after
+        payload = make_okx_request(
+            "/api/v5/public/liquidation-orders",
+            params,
+            proxy_url=proxy_url,
+        )
+        data_entries = payload.get("data", []) if isinstance(payload, dict) else []
+        details: List[Dict[str, Any]] = []
+        for entry in data_entries:
+            entry_details = entry.get("details")
+            if isinstance(entry_details, list):
+                details.extend(entry_details)
+        if not details:
+            break
+        reached_cutoff = False
+        oldest_ts: Optional[int] = None
+        for detail in details:
+            ts_raw = detail.get("ts") or detail.get("time")
+            try:
+                ts_int = int(ts_raw)
+            except (TypeError, ValueError, TypeError):
+                continue
+            if ts_int in seen:
+                continue
+            seen.add(ts_int)
+            if oldest_ts is None or ts_int < oldest_ts:
+                oldest_ts = ts_int
+            if ts_int < cutoff_ms:
+                reached_cutoff = True
+                continue
+            pos_side = (detail.get("posSide") or detail.get("side") or "").strip().lower()
+            if pos_side not in {"long", "short"}:
+                continue
+            try:
+                size = float(detail.get("sz", "0"))
+            except (TypeError, ValueError):
+                continue
+            price_raw = detail.get("bkPx")
+            try:
+                price = float(price_raw)
+            except (TypeError, ValueError):
+                price = None
+            notional_usd = size * price if price is not None else None
+            dt = pd.to_datetime(ts_int, unit="ms", utc=True).tz_convert("Asia/Shanghai")
+            record = {
+                "datetime": dt,
+                "pos_side": pos_side,
+                "size": size,
+            }
+            if notional_usd is not None:
+                record["notional_usd"] = notional_usd
+            records.append(record)
+        if oldest_ts is None:
+            break
+        after = str(oldest_ts - 1)
+        if reached_cutoff:
+            break
+        if len(details) < batch_limit:
+            break
+    if not records:
+        return pd.DataFrame(columns=["liquidation_long_usd", "liquidation_short_usd"])
+    df = pd.DataFrame(records)
+    df["date"] = df["datetime"].dt.normalize()
+    aggregations = {
+        "notional_usd": "sum",
+        "size": "sum",
+    }
+    grouped = df.groupby(["date", "pos_side"]).agg(aggregations).unstack(fill_value=0.0)
+    grouped.columns = [f"{metric}_{side}" for metric, side in grouped.columns]
+    for col in ("notional_usd_long", "notional_usd_short", "size_long", "size_short"):
+        if col not in grouped:
+            grouped[col] = 0.0
+    grouped = grouped.sort_index()
+    grouped.rename(
+        columns={
+            "notional_usd_long": "liquidation_long_usd",
+            "notional_usd_short": "liquidation_short_usd",
+            "size_long": "liquidation_long_sz",
+            "size_short": "liquidation_short_sz",
+        },
+        inplace=True,
+    )
+    if not grouped.empty:
+        tz = df["datetime"].dt.tz if not df.empty else None
+        if tz is not None:
+            cutoff_dt = datetime.fromtimestamp(cutoff_ms / 1000, tz=timezone.utc).astimezone(tz)
+            start_date = pd.Timestamp(cutoff_dt.replace(hour=0, minute=0, second=0, microsecond=0))
+            now_local = datetime.now(timezone.utc).astimezone(tz)
+            end_date = pd.Timestamp(now_local.replace(hour=0, minute=0, second=0, microsecond=0))
+        else:
+            start_date = pd.Timestamp(
+                datetime.fromtimestamp(cutoff_ms / 1000, tz=timezone.utc).replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
+            )
+            end_date = grouped.index.max()
+        if start_date is not None and end_date is not None and start_date <= end_date:
+            full_range = pd.date_range(start=start_date, end=end_date, freq="D", tz=tz)
+            grouped = grouped.reindex(full_range, fill_value=0.0)
+    return grouped
 
 
 def add_bollinger_bands(
@@ -441,6 +653,69 @@ def export_atr_metrics(
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
     print(f"已导出 ATR 数据至 {path}（周期 {period}，最近 {lookback} 天）")
+
+
+def export_open_interest_history(
+    df: pd.DataFrame,
+    path: str = "eth_open_interest_history.json",
+    lookback: int = 180,
+) -> None:
+    """
+    导出开仓量与永续成交额历史。
+    """
+    if df.empty:
+        print("未获取到开仓量历史，跳过导出。")
+        return
+    subset = df.sort_index().tail(lookback)
+    rows: List[Dict[str, Any]] = []
+    for idx, row in subset.iterrows():
+        rows.append(
+            {
+                "date": idx.strftime("%Y-%m-%d"),
+                "open_interest_usd": round(float(row.get("open_interest_usd", float("nan"))), 2)
+                if pd.notna(row.get("open_interest_usd"))
+                else None,
+                "perp_volume_usd": round(float(row.get("perp_volume_usd", float("nan"))), 2)
+                if pd.notna(row.get("perp_volume_usd"))
+                else None,
+                "open_interest_usd_change_pct": round(
+                    float(row.get("open_interest_usd_change_pct", float("nan"))), 2
+                )
+                if pd.notna(row.get("open_interest_usd_change_pct"))
+                else None,
+            }
+        )
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(rows, f, ensure_ascii=False, indent=2)
+    print(f"已导出开仓量历史至 {path}")
+
+
+def export_liquidation_history(
+    df: pd.DataFrame,
+    path: str = "eth_liquidations_daily.json",
+    lookback: int = 60,
+) -> None:
+    """
+    导出多空爆仓聚合数据。
+    """
+    if df.empty:
+        print("未获取到爆仓数据，跳过导出。")
+        return
+    subset = df.sort_index().tail(lookback)
+    rows: List[Dict[str, Any]] = []
+    for idx, row in subset.iterrows():
+        rows.append(
+            {
+                "date": idx.strftime("%Y-%m-%d"),
+                "long_liquidations_usd": round(float(row.get("liquidation_long_usd", 0.0)), 2),
+                "short_liquidations_usd": round(float(row.get("liquidation_short_usd", 0.0)), 2),
+                "long_liquidations_sz": round(float(row.get("liquidation_long_sz", 0.0)), 4),
+                "short_liquidations_sz": round(float(row.get("liquidation_short_sz", 0.0)), 4),
+            }
+        )
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(rows, f, ensure_ascii=False, indent=2)
+    print(f"已导出爆仓聚合数据至 {path}")
 
 def plot_price_volume_rsi(
     df: pd.DataFrame,
@@ -821,6 +1096,111 @@ def plot_price_volume_rsi(
         plt.close(fig)
 
 
+def plot_open_interest_and_liquidations(
+    price_df: pd.DataFrame,
+    oi_df: pd.DataFrame,
+    liquidation_df: pd.DataFrame,
+    output_path: str = "eth_open_interest_liquidations.png",
+    show: bool = False,
+) -> None:
+    """
+    绘制收盘价叠加开仓量，并在图上注记近期爆仓规模。
+    """
+    if oi_df.empty:
+        print("无开仓量数据，跳过开仓量图。")
+        return
+
+    plot_start: Optional[pd.Timestamp] = None
+    plot_end: Optional[pd.Timestamp] = None
+    if not liquidation_df.empty:
+        plot_start = liquidation_df.index.min()
+        plot_end = liquidation_df.index.max()
+    if plot_start is None or plot_end is None:
+        plot_start = oi_df.index.min()
+        plot_end = oi_df.index.max()
+
+    if plot_start is None or plot_end is None:
+        plot_start = oi_df.index.min()
+        plot_end = oi_df.index.max()
+
+    pad = pd.Timedelta(days=2)
+    plot_start = plot_start - pad
+    plot_end = plot_end + pad
+
+    price_slice = price_df.loc[plot_start:plot_end]
+    if price_slice.empty:
+        price_slice = price_df.copy()
+
+    merged = price_slice[["close"]].copy()
+    if not oi_df.empty:
+        oi_slice = oi_df.loc[:plot_end].sort_index()
+        oi_series = oi_slice["open_interest_usd"].reindex(merged.index, method="ffill")
+        if oi_series.isna().all():
+            oi_series = oi_slice["open_interest_usd"].reindex(merged.index, method="bfill")
+        merged["open_interest_usd"] = oi_series
+        if "perp_volume_usd" in oi_slice.columns:
+            volume_series = oi_slice["perp_volume_usd"].reindex(merged.index, method="ffill")
+            merged["perp_volume_usd"] = volume_series
+        else:
+            merged["perp_volume_usd"] = np.nan
+    else:
+        merged["open_interest_usd"] = np.nan
+        merged["perp_volume_usd"] = np.nan
+
+    fig, ax_price = plt.subplots(figsize=(12, 6))
+    ax_price.plot(merged.index, merged["close"], color="#212121", linewidth=1.0, label="Close")
+    ax_price.set_ylabel("Close (USDT)")
+    ax_price.grid(True, linestyle="--", alpha=0.12)
+
+    if merged["open_interest_usd"].notna().any():
+        ax_oi = ax_price.twinx()
+        oi_line = merged["open_interest_usd"] / 1e9
+        ax_oi.plot(merged.index, oi_line, color="#1e88e5", linewidth=1.3, label="Open Interest (B USD)")
+        ax_oi.set_ylabel("Open Interest (B USD)")
+        ax_oi.grid(False)
+        ax_price.legend(loc="upper left")
+        ax_oi.legend(loc="upper right")
+    else:
+        ax_price.legend(loc="upper left")
+
+    if not liquidation_df.empty and (
+        liquidation_df["liquidation_long_usd"].notna().any() or liquidation_df["liquidation_short_usd"].notna().any()
+    ):
+        liq_slice = liquidation_df.loc[plot_start:plot_end].fillna(0.0)
+        summary_rows = []
+        for idx, row in liq_slice.iterrows():
+            total_long = float(row.get("liquidation_long_usd", 0.0))
+            total_short = float(row.get("liquidation_short_usd", 0.0))
+            if total_long == 0.0 and total_short == 0.0:
+                continue
+            summary_rows.append(
+                f"{idx.strftime('%Y-%m-%d')}: Long ${total_long/1e6:.1f}M, Short ${total_short/1e6:.1f}M"
+            )
+        if summary_rows:
+            annotation = "Recent Liquidations (USD):\n" + "\n".join(summary_rows[-10:])
+            ax_price.text(
+                0.02,
+                0.02,
+                annotation,
+                transform=ax_price.transAxes,
+                fontsize=9,
+                color="#424242",
+                ha="left",
+                va="bottom",
+                bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "alpha": 0.65},
+            )
+
+    ax_price.set_xlabel("Date")
+    fig.autofmt_xdate()
+    plt.tight_layout()
+    if output_path:
+        fig.savefig(output_path, dpi=150)
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+
 def main() -> None:
     exchange = build_exchange()
 
@@ -839,6 +1219,22 @@ def main() -> None:
     df = add_volume_indicators(df, ma_window=20)
     df = add_price_percentile(df, window=20)
 
+    oi_history = fetch_open_interest_volume_history(limit=180)
+    if oi_history.empty:
+        print("未获取到开仓量历史数据。")
+    else:
+        df = df.join(oi_history[["open_interest_usd", "perp_volume_usd"]], how="left")
+        df["open_interest_usd_ma_7"] = df["open_interest_usd"].rolling(window=7, min_periods=1).mean()
+        df["open_interest_eth"] = df["open_interest_usd"] / df["close"]
+        export_open_interest_history(oi_history)
+
+    liquidation_daily = fetch_liquidation_aggregates(hours=24 * 30)
+    if liquidation_daily.empty:
+        print("未获取到爆仓聚合数据。")
+    else:
+        df = df.join(liquidation_daily, how="left")
+        export_liquidation_history(liquidation_daily)
+
     export_recent_signals(df, lookback=60)
     export_atr_metrics(df, period=14, lookback=180, path="atr_metrics.json")
 
@@ -853,7 +1249,15 @@ def main() -> None:
         atr_period=14,
     )
 
-    latest = df.dropna().iloc[-1]
+    plot_open_interest_and_liquidations(
+        df,
+        oi_df=oi_history,
+        liquidation_df=liquidation_daily,
+        output_path="eth_open_interest_liquidations.png",
+        show=False,
+    )
+
+    latest = df.dropna(subset=["close", "volume", "volume_ma_20", "prev_volume_ratio_ma_20"]).iloc[-1]
     prev_ratio = latest["prev_volume_ratio_ma_20"]
     ma_volume = latest["volume_ma_20"]
     prev_volume = df["volume"].iloc[-2] if len(df) >= 2 else float("nan")
