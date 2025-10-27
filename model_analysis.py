@@ -61,6 +61,7 @@ def build_onchain_parts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
     stable_para = dr.get("stablecoins", {}).get("paragraph")
     bridge_para = dr.get("bridges", {}).get("paragraph")
     fear_para = dr.get("fear_greed", {}).get("paragraph")
+    purchase_power_para = dr.get("purchase_power", {}).get("paragraph")
 
     eth_gas = snapshot.get("eth_gas", {})
     btc_mempool = snapshot.get("btc_mempool", {})
@@ -160,6 +161,8 @@ def build_onchain_parts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
         extra_blocks.append("跨链桥接摘要：" + str(bridge_para))
     if fear_para:
         extra_blocks.append("恐慌指数摘要：" + str(fear_para))
+    if purchase_power_para:
+        extra_blocks.append("稳定币购买力摘要：" + str(purchase_power_para))
     if gas_para:
         extra_blocks.append("Gas/Mempool 摘要：" + str(gas_para))
     if isinstance(dr_news, dict):
@@ -176,6 +179,7 @@ def build_onchain_parts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
             "stable": stable_para,
             "bridge": bridge_para,
             "fear": fear_para,
+            "purchase_power": purchase_power_para,
             "gas": gas_para,
             "news": news_summary,
             "derivatives": derivatives_para,
@@ -215,6 +219,9 @@ def build_payload(
         oc = build_onchain_parts(onchain)
         payload["extra_blocks"].extend(oc.get("extra_blocks", []))
         payload["onchain_paragraphs"] = oc.get("paragraphs", {})
+        payload["extra_blocks"].append(
+            "链上快照（JSON）：\n" + json.dumps(onchain, ensure_ascii=False, indent=2)
+        )
     return payload
 
 
@@ -404,6 +411,8 @@ def save_report(payload: Dict[str, Any], analysis_text: str, path: Path, model_l
                 f.write("- 桥接：" + str(ocp["bridge"]) + "\n")
             if ocp.get("fear"):
                 f.write("- 恐慌指数：" + str(ocp["fear"]) + "\n")
+            if ocp.get("purchase_power"):
+                f.write("- 稳定币购买力：" + str(ocp["purchase_power"]) + "\n")
             if ocp.get("gas"):
                 f.write("- Gas/Mempool：" + str(ocp["gas"]) + "\n")
             if ocp.get("news"):
@@ -427,7 +436,8 @@ def save_email_body(analysis_text: str, path: Path) -> None:
 def main() -> None:
     deepseek_key = os.environ.get("DEEPSEEK_API_KEY")
     gemini_key = os.environ.get("GEMINI_API_KEY")
-    if not deepseek_key and not gemini_key:
+    skip_llm = (os.environ.get("SKIP_LLM", "0").lower() in {"1", "true", "yes"})
+    if not deepseek_key and not gemini_key and not skip_llm:
         raise SystemExit("未设置 DEEPSEEK_API_KEY 或 GEMINI_API_KEY，无法生成分析。")
 
     proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
@@ -447,6 +457,12 @@ def main() -> None:
     signals = load_signals(SIGNAL_FILE)
     onchain = load_onchain_snapshot(ONCHAIN_SNAPSHOT_FILE)
     payload = build_payload(signals, onchain)
+
+    if skip_llm:
+        save_report(payload, "", Path("model_analysis.md"), "本地")
+        print("跳过 LLM，已写入 model_analysis.md")
+        return
+
     analysis_text = None
     model_label = ""
 

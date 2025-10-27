@@ -1579,13 +1579,120 @@ def aggregate_snapshot(session: requests.Session) -> Dict[str, Any]:
     ethereum_metrics = fetch_blockchair_metrics(session, "ethereum")
     bitcoin_metrics = fetch_blockchair_metrics(session, "bitcoin")
     btc_mempool = fetch_bitcoin_mempool(session)
-    eth_gas = fetch_eth_gas_etherscan(session, os.environ.get("ETHERSCAN_API_KEY"))
+    # 尝试从环境或 .env 加载 Etherscan API Key
+    eth_api_key = os.environ.get("ETHERSCAN_API_KEY")
+    if not eth_api_key:
+        try:
+            env_path = Path(".env")
+            if env_path.exists():
+                for line in env_path.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    if "=" in line:
+                        k, v = line.split("=", 1)
+                        if k.strip() == "ETHERSCAN_API_KEY" and v.strip():
+                            os.environ.setdefault("ETHERSCAN_API_KEY", v.strip())
+                            eth_api_key = v.strip()
+                            break
+        except Exception:
+            pass
+
+    eth_gas = fetch_eth_gas_etherscan(session, eth_api_key)
     news = gather_news(session)
     fear_greed = fetch_fear_greed_index(session, limit=15)
     blockchair_overview = fetch_blockchair_eth_overview(session)
     eth_open_interest = fetch_okx_open_interest_volume(session, ccy="ETH", inst_type="SWAP", period="1D", limit=120)
     eth_liquidations = fetch_okx_liquidation_summary(session, uly="ETH-USDT", inst_type="SWAP", hours=72)
     bridge_simple = fetch_defillama_bridge_flows_simple(session)
+
+    # 计算 24h 稳定币发行/赎回净额（USDT/USDC/DAI），用于“稳定币购买力”
+    mint_burn_24h = None
+    try:
+        if eth_api_key:
+            now = datetime.now(timezone.utc)
+            start_ts = int((now - timedelta(hours=24)).timestamp())
+            end_ts = int(now.timestamp())
+            def _block_by_time(ts: int) -> Optional[int]:
+                resp = _fetch_json(
+                    session,
+                    "https://api.etherscan.io/api",
+                    params={
+                        "module": "block",
+                        "action": "getblocknobytime",
+                        "timestamp": str(ts),
+                        "closest": "before",
+                        "apikey": eth_api_key,
+                    },
+                )
+                try:
+                    return int(resp.get("result")) if resp.get("result") is not None else None
+                except (TypeError, ValueError):
+                    return None
+            start_block = _block_by_time(start_ts)
+            end_block = _block_by_time(end_ts)
+            ZERO_32 = "0x" + "0" * 64
+            TRANSFER_TOPIC0 = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+            tokens = [
+                {"symbol": "USDT", "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7", "decimals": 6},
+                {"symbol": "USDC", "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eb48", "decimals": 6},
+                {"symbol": "DAI",  "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F", "decimals": 18},
+            ]
+            def _sum_logs(addr: str, zero_as_from: bool) -> float:
+                if not start_block or not end_block:
+                    return 0.0
+                params = {
+                    "module": "logs",
+                    "action": "getLogs",
+                    "address": addr,
+                    "fromBlock": str(start_block),
+                    "toBlock": str(end_block),
+                    "topic0": TRANSFER_TOPIC0,
+                }
+                if zero_as_from:
+                    params["topic1"] = ZERO_32
+                else:
+                    params["topic2"] = ZERO_32
+                resp = _fetch_json(session, "https://api.etherscan.io/api", params=params)
+                logs = resp.get("result") if isinstance(resp, dict) else None
+                total = 0.0
+                if isinstance(logs, list):
+                    for lg in logs:
+                        data_hex = lg.get("data")
+                        if isinstance(data_hex, str) and data_hex.startswith("0x"):
+                            try:
+                                total += int(data_hex, 16)
+                            except Exception:
+                                continue
+                return total
+            breakdown: Dict[str, Dict[str, float]] = {}
+            total_mint_usd = 0.0
+            total_burn_usd = 0.0
+            for t in tokens:
+                mint_raw = _sum_logs(t["address"], True)
+                burn_raw = _sum_logs(t["address"], False)
+                denom = float(10 ** t["decimals"]) if isinstance(t["decimals"], int) else 1.0
+                mint = float(mint_raw) / denom
+                burn = float(burn_raw) / denom
+                net = mint - burn
+                breakdown[t["symbol"]] = {"mint": round(mint, 2), "burn": round(burn, 2), "net": round(net, 2)}
+                total_mint_usd += mint
+                total_burn_usd += burn
+            mint_burn_24h = {
+                "source": "https://api.etherscan.io/api",
+                "timeframe": "24h",
+                "start_block": start_block,
+                "end_block": end_block,
+                "tokens": breakdown,
+                "totals": {
+                    "mint_usd": round(total_mint_usd, 2),
+                    "burn_usd": round(total_burn_usd, 2),
+                    "net_usd": round(total_mint_usd - total_burn_usd, 2),
+                },
+            }
+    except Exception as exc:
+        mint_burn_24h = {"error": f"etherscan_mint_burn_failed: {exc}"}
+
     bridge_top_n = int(os.getenv("BRIDGE_TOP_N", "5"))
     daily_report = build_daily_report(
         ethereum_flows,
@@ -1598,6 +1705,22 @@ def aggregate_snapshot(session: requests.Session) -> Dict[str, Any]:
         blockchair_overview,
         top_n=bridge_top_n,
     )
+
+    # 在日报中追加“稳定币购买力”段落
+    try:
+        pp_parts = []
+        if isinstance(mint_burn_24h, dict) and isinstance(mint_burn_24h.get("totals"), dict):
+            totals = mint_burn_24h["totals"]
+            pp_parts.append(
+                f"发行/赎回净额 24h: {totals.get('net_usd')} USD（发行 {totals.get('mint_usd')}，赎回 {totals.get('burn_usd')}）"
+            )
+        eth_bridge_24h = bridge_simple.get("eth_volume_24h_usd") if isinstance(bridge_simple, dict) else None
+        if isinstance(eth_bridge_24h, (int, float)):
+            pp_parts.append(f"跨链桥接 24h 体量（ETH）：{eth_bridge_24h} USD")
+        if pp_parts:
+            daily_report["purchase_power"] = {"paragraph": "； ".join(pp_parts)}
+    except Exception:
+        pass
 
     return {
         "generated_at": timestamp,
@@ -1615,6 +1738,7 @@ def aggregate_snapshot(session: requests.Session) -> Dict[str, Any]:
         "fear_greed": fear_greed,
         "blockchair_overview": blockchair_overview,
         "bridge_summary_24h": bridge_simple,
+        "stablecoin_mint_burn_24h": mint_burn_24h,
         "derivatives": {
             "okx": {
                 "eth_open_interest_volume": eth_open_interest,
