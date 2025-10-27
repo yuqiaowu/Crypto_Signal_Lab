@@ -179,12 +179,54 @@ def _numeric_change(current: Optional[float], previous: Optional[float]) -> Dict
 
 
 def _extract_series_value(entry: Dict[str, Any]) -> Optional[float]:
-    for key in ("totalCirculating", "totalCirculatingUSD", "totalLiquidityUSD", "totalLiquidity", "value"):
-        if key in entry:
+    def _extract_numeric(value: Any) -> Optional[float]:
+        if value is None:
+            return None
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
             try:
-                return float(entry[key])
+                return float(value.replace(",", ""))
             except (TypeError, ValueError):
-                continue
+                return None
+        if isinstance(value, dict):
+            # common nested keys for stablecoin stats
+            for nested_key in (
+                "peggedUSD",
+                "totalCirculating",
+                "totalCirculatingUSD",
+                "total",
+                "value",
+                "current",
+            ):
+                if nested_key in value:
+                    nested_val = _extract_numeric(value[nested_key])
+                    if nested_val is not None:
+                        return nested_val
+            for nested_val in value.values():
+                num = _extract_numeric(nested_val)
+                if num is not None:
+                    return num
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                num = _extract_numeric(item)
+                if num is not None:
+                    return num
+        return None
+
+    for key in (
+        "totalCirculating",
+        "totalCirculatingUSD",
+        "totalLiquidityUSD",
+        "totalLiquidity",
+        "value",
+        "circulating",
+        "circulatingUSD",
+    ):
+        if key in entry:
+            num = _extract_numeric(entry[key])
+            if num is not None:
+                return num
     return None
 
 
@@ -664,6 +706,20 @@ def _extract_series_from_payload(payload: Any) -> Optional[List[Dict[str, Any]]]
 
 def _summarize_stablecoin_series(series: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     cleaned: List[Dict[str, Any]] = []
+    def _coerce_order(ts: Any) -> Optional[float]:
+        if isinstance(ts, (int, float)):
+            return float(ts)
+        if isinstance(ts, str):
+            try:
+                return float(ts)
+            except (TypeError, ValueError):
+                try:
+                    normalized = ts.replace("Z", "+00:00") if "Z" in ts and "+" not in ts else ts
+                    return datetime.fromisoformat(normalized).timestamp()
+                except (TypeError, ValueError):
+                    return None
+        return None
+
     for entry in series:
         value = _extract_series_value(entry)
         if value is None:
@@ -675,9 +731,10 @@ def _summarize_stablecoin_series(series: List[Dict[str, Any]]) -> Optional[Dict[
             or entry.get("ts")
             or entry.get("dateUTC")
         )
-        cleaned.append({"timestamp": ts, "value": float(value)})
+        cleaned.append({"timestamp": ts, "value": float(value), "order": _coerce_order(ts)})
     if not cleaned:
         return None
+    cleaned.sort(key=lambda item: item.get("order") if item.get("order") is not None else float("inf"))
     latest = cleaned[-1]
     previous = cleaned[-2] if len(cleaned) > 1 else None
     summary: Dict[str, Any] = {
@@ -694,6 +751,8 @@ def _summarize_stablecoin_series(series: List[Dict[str, Any]]) -> Optional[Dict[
             "value": round(previous["value"], 2),
         }
         summary["change"] = _numeric_change(latest["value"], previous["value"])
+    for item in cleaned:
+        item.pop("order", None)
     return summary
 
 
@@ -1347,7 +1406,54 @@ def build_daily_report(
     fear_latest = fear.get("latest")
     eth_latest_val = eth_sc.get("latest")
     eth_latest_val = eth_latest_val.get("value") if isinstance(eth_latest_val, dict) else None
-    sc_para = f"稳定币 — ETH 最新: {eth_latest_val}, 环比: {eth_sc.get('change')}。"
+    eth_prev_val = eth_sc.get("previous")
+    eth_prev_val = eth_prev_val.get("value") if isinstance(eth_prev_val, dict) else None
+
+    def _fmt_usd(value: Any) -> str:
+        if value is None:
+            return "N/A"
+        try:
+            return f"{float(value):,.2f} USD"
+        except (TypeError, ValueError):
+            return str(value)
+
+    def _fmt_change(change: Any) -> Optional[str]:
+        if isinstance(change, dict):
+            abs_change = change.get("abs_change")
+            pct_change = change.get("pct_change")
+            parts: List[str] = []
+            if abs_change is not None:
+                try:
+                    parts.append(f"{abs_change:+,.2f} USD")
+                except (TypeError, ValueError):
+                    parts.append(str(abs_change))
+            if pct_change is not None:
+                try:
+                    parts.append(f"{pct_change:+.2f}%")
+                except (TypeError, ValueError):
+                    parts.append(str(pct_change))
+            if parts:
+                return " / ".join(parts)
+            current = change.get("current")
+            previous = change.get("previous")
+            if isinstance(current, (int, float)) and isinstance(previous, (int, float)) and previous:
+                delta_pct = (current - previous) / previous * 100
+                return f"{delta_pct:+.2f}%"
+        elif change is not None:
+            return str(change)
+        return None
+
+    change_display = _fmt_change(eth_sc.get("change"))
+    change_parts: List[str] = []
+    if change_display:
+        change_parts.append(change_display)
+    if eth_prev_val is not None:
+        change_parts.append(f"前值 {_fmt_usd(eth_prev_val)}")
+
+    sc_para = f"稳定币 — ETH 最新: {_fmt_usd(eth_latest_val)}"
+    if change_parts:
+        sc_para += f"，环比: {'； '.join(change_parts)}"
+    sc_para += "。"
     bridge_para_parts: List[str] = []
     if isinstance(bridge_simple, dict) and not bridge_simple.get("error"):
         eth_24h = bridge_simple.get("eth_volume_24h_usd")
