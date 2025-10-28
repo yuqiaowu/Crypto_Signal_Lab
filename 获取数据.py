@@ -558,6 +558,9 @@ def compute_signal_info(df: pd.DataFrame) -> Dict[str, Any]:
 def export_recent_signals(df: pd.DataFrame, path: str = "signals_60d.json", lookback: int = 60) -> None:
     signals = compute_signal_info(df)
     recent = df.iloc[-lookback:].copy()
+    adx_series = signals.get("adx")
+    plus_di_series = signals.get("+di")
+    minus_di_series = signals.get("-di")
 
     rows: list[Dict[str, Any]] = []
     for idx, row in recent.iterrows():
@@ -596,6 +599,21 @@ def export_recent_signals(df: pd.DataFrame, path: str = "signals_60d.json", look
                 "adx_down": bool(signals["adx_down"].loc[idx]),
                 "adx_up": bool(signals["adx_up"].loc[idx]),
             },
+            "adx_14": (
+                round(float(adx_series.loc[idx]), 2)
+                if isinstance(adx_series, pd.Series) and idx in adx_series.index and not pd.isna(adx_series.loc[idx])
+                else None
+            ),
+            "plus_di_14": (
+                round(float(plus_di_series.loc[idx]), 2)
+                if isinstance(plus_di_series, pd.Series) and idx in plus_di_series.index and not pd.isna(plus_di_series.loc[idx])
+                else None
+            ),
+            "minus_di_14": (
+                round(float(minus_di_series.loc[idx]), 2)
+                if isinstance(minus_di_series, pd.Series) and idx in minus_di_series.index and not pd.isna(minus_di_series.loc[idx])
+                else None
+            ),
             "ma_status": ma_status_entry,
         }
         rows.append(entry)

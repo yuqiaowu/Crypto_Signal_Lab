@@ -183,6 +183,106 @@ def build_onchain_parts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def summarize_latest_day(signals: List[Dict[str, Any]]) -> str | None:
+    if not signals:
+        return None
+    latest = signals[-1]
+    if not isinstance(latest, dict):
+        return None
+    date = latest.get("date", "未知日期")
+    close = latest.get("close")
+    volume = latest.get("volume")
+    vol_ratio = latest.get("volume_ratio_ma20")
+    rsi = latest.get("rsi14")
+    bb_lower = latest.get("bb_lower")
+    bb_slope = latest.get("bb_lower_slope")
+    atr_pct = latest.get("atr_pct_14")
+    ma_values = {
+        "MA5": latest.get("ma_5"),
+        "MA10": latest.get("ma_10"),
+        "MA20": latest.get("ma_20"),
+        "MA60": latest.get("ma_60"),
+    }
+
+    def _fmt(value: Any) -> str:
+        try:
+            return f"{float(value):,.2f}"
+        except (TypeError, ValueError):
+            return "N/A"
+
+    def _fmt_pct(value: Any) -> str:
+        try:
+            return f"{float(value):.2f}%"
+        except (TypeError, ValueError):
+            return "N/A"
+
+    parts: List[str] = [
+        f"最新交易日（{date}）收盘 { _fmt(close) } USD",
+    ]
+
+    ma_parts: List[str] = []
+    for label, base in ma_values.items():
+        try:
+            diff_pct = (float(close) / float(base) - 1.0) * 100 if close and base else None
+        except (TypeError, ValueError, ZeroDivisionError):
+            diff_pct = None
+        if base is not None:
+            if diff_pct is not None:
+                ma_parts.append(f"{label} { _fmt(base) } ({diff_pct:+.2f}%)")
+            else:
+                ma_parts.append(f"{label} { _fmt(base) }")
+    if ma_parts:
+        parts.append(" | ".join(ma_parts))
+
+    vol_piece = f"成交量 { _fmt(volume) }"
+    if vol_ratio is not None:
+        try:
+            vol_piece += f"（为20日均量的 {float(vol_ratio):.2f}x）"
+        except (TypeError, ValueError):
+            pass
+    parts.append(vol_piece)
+
+    if rsi is not None:
+        parts.append(f"RSI14 { _fmt(rsi) }")
+    if bb_lower is not None:
+        bb_piece = f"布林带下轨 { _fmt(bb_lower) }"
+        if bb_slope is not None:
+            try:
+                bb_piece += f"，斜率 {float(bb_slope):+.4f}"
+            except (TypeError, ValueError):
+                pass
+        parts.append(bb_piece)
+    if atr_pct is not None:
+        parts.append(f"ATR%14 {_fmt_pct(atr_pct)}")
+    return "； ".join(parts)
+
+
+def compute_latest_ma_relation(signals: List[Dict[str, Any]]) -> Dict[str, str] | None:
+    if not signals:
+        return None
+    latest = signals[-1]
+    if not isinstance(latest, dict):
+        return None
+    ma_status = latest.get("ma_status")
+    if not isinstance(ma_status, dict):
+        return None
+    relation: Dict[str, str] = {}
+    for ma_key, status in ma_status.items():
+        if not isinstance(status, dict):
+            continue
+        above = bool(status.get("above"))
+        below = bool(status.get("below"))
+        if above and not below:
+            relation[ma_key] = "above"
+        elif below and not above:
+            relation[ma_key] = "below"
+        elif above and below:
+            relation[ma_key] = "both"
+        else:
+            relation[ma_key] = "unknown"
+    return relation or None
+
+
 def build_payload(
     signals: List[Dict[str, Any]],
     onchain: Dict[str, Any] | None = None,
@@ -195,6 +295,8 @@ def build_payload(
 4. 在形成建议时，请清晰描述你的逻辑，尤其是布林带形态、成交量与均线的配合情况。
 5. 数据中已为每个交易日计算买入/卖出星级（0~3星，分别基于 RSI、放量、DMI 叠加），请结合星级及其他指标作出具体建议，并说明理由。
 6. 请判断是否“有效站上/跌破关键均线”，并给出依据：默认关注 MA20/MA60/MA120/MA180；“有效”的定义为价格至少连续3天在均线之上/之下，同时量能不低于均量（以 `volume_ratio_ma20` 为准；≥1.0 为基本支持，≥1.5 为较强支持）。
+7. `recent_data` 按时间顺序排列，请务必以最后一条记录视为最新收盘日，并据此判断当前市场状态。
+8. 已额外提供 `latest_ma_relation` 字段，标明最新收盘价相对各条均线的位置（above / below / both / unknown），请在分析中引用该字段验证你的判断。
 请输出：
 - 按以下标题输出详细内容（无须额外说明）：
   1. 《市场概述》——布林带、均线、量能综合评价。
@@ -211,6 +313,15 @@ def build_payload(
         "recent_data": signals,
         "extra_blocks": [],
     }
+    latest_summary = summarize_latest_day(signals)
+    if latest_summary:
+        payload["extra_blocks"].append("最新交易日摘要：" + latest_summary)
+    latest_relation = compute_latest_ma_relation(signals)
+    if latest_relation:
+        payload["latest_ma_relation"] = latest_relation
+        payload["extra_blocks"].append(
+            "最新均线相对位置：" + json.dumps(latest_relation, ensure_ascii=False)
+        )
     if onchain:
         oc = build_onchain_parts(onchain)
         payload["extra_blocks"].extend(oc.get("extra_blocks", []))
@@ -447,6 +558,9 @@ def main() -> None:
     signals = load_signals(SIGNAL_FILE)
     onchain = load_onchain_snapshot(ONCHAIN_SNAPSHOT_FILE)
     payload = build_payload(signals, onchain)
+    if payload["recent_data"]:
+        print("最新交易日数据快照：")
+        print(json.dumps(payload["recent_data"][-1], ensure_ascii=False, indent=2))
     analysis_text = None
     model_label = ""
 
