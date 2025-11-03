@@ -287,7 +287,8 @@ def build_payload(
     signals: List[Dict[str, Any]],
     onchain: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
-    instructions = """
+    today_str = time.strftime("%Y-%m-%d", time.localtime())
+    instructions = f"""
 你是一名资深的币圈投资分析师。以下数据仅包含最近60天已收盘的日线，请基于下列规则严格分析，并给出买入/卖出建议：
 1. 识别买入信号时，务必检查布林带下轨斜率是否趋缓或开始向上；若布林带仍陡峭向下，即使出现触碰下轨也需谨慎。
 2. 理想买入点应满足：布林带斜率趋缓或向上拐头，同时价格贴近或触碰下轨，并结合 RSI、成交量及关键均线表现进行验证。
@@ -297,6 +298,7 @@ def build_payload(
 6. 请判断是否“有效站上/跌破关键均线”，并给出依据：默认关注 MA20/MA60/MA120/MA180；“有效”的定义为价格至少连续3天在均线之上/之下，同时量能不低于均量（以 `volume_ratio_ma20` 为准；≥1.0 为基本支持，≥1.5 为较强支持）。
 7. `recent_data` 按时间顺序排列，请务必以最后一条记录视为最新收盘日，并据此判断当前市场状态。
 8. 已额外提供 `latest_ma_relation` 字段，标明最新收盘价相对各条均线的位置（above / below / both / unknown），请在分析中引用该字段验证你的判断。
+9. 请在《市场概述》的开头明确写出今天是 {today_str}（当地时间），确保读者了解分析日期。
 请输出：
 - 按以下标题输出详细内容（无须额外说明）：
   1. 《市场概述》——布林带、均线、量能综合评价。
@@ -313,6 +315,7 @@ def build_payload(
         "recent_data": signals,
         "extra_blocks": [],
     }
+    payload["extra_blocks"].append(f"今日日期：{today_str}")
     latest_summary = summarize_latest_day(signals)
     if latest_summary:
         payload["extra_blocks"].append("最新交易日摘要：" + latest_summary)
