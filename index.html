@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NewETH · 链上与量化日报</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./web/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+    <script src="./web/app.js" type="module" defer></script>
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero__content">
+        <p class="hero__eyebrow">NewETH</p>
+        <h1>链上数据 + AI Daily = 决策控制台</h1>
+        <p class="hero__lede">
+          自动化脚本从 DeFiLlama、OKX、Etherscan、Blockchair 等来源抓取链上指标，结合 Gemini/DeepSeek
+          生成的市场分析，帮助你快速理解以太坊的资金动向、波动率状态与操作建议。
+        </p>
+        <div class="hero__cta">
+          <a class="pill pill--primary" href="#automation">查看自动化流程</a>
+          <a class="pill pill--ghost" href="#analysis">最新 AI 日报</a>
+        </div>
+      </div>
+      <div class="hero__datapoints" id="latestMetrics">
+        <div class="hero-card">
+          <span class="hero-card__label">最新 ATR%</span>
+          <strong class="hero-card__value" data-field="atr_pct">--</strong>
+          <span class="hero-card__hint" data-field="atr_date">加载中...</span>
+        </div>
+        <div class="hero-card">
+          <span class="hero-card__label">波动率区间</span>
+          <strong class="hero-card__value" data-field="atr_range">--</strong>
+          <span class="hero-card__hint">最近180天 (ATR%)</span>
+        </div>
+        <div class="hero-card">
+          <span class="hero-card__label">永续持仓(USD)</span>
+          <strong class="hero-card__value" data-field="open_interest">--</strong>
+          <span class="hero-card__hint" data-field="oi_date">加载中...</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section id="overview" class="panel">
+        <div class="panel__header">
+          <h2>项目简介</h2>
+          <p>NewETH 聚焦以太坊的链上与衍生品指标，通过脚本自动生成派发用的日报及邮件内容。</p>
+        </div>
+        <div class="panel__content" id="readmeContent">
+          <p>正在加载 README...</p>
+        </div>
+      </section>
+
+      <section id="automation" class="panel">
+        <div class="panel__header">
+          <h2>自动化脚本</h2>
+          <p>脚本直接运行即可生成所需 JSON、图表以及 AI 日报。</p>
+        </div>
+        <div class="grid grid--scripts">
+          <article class="card">
+            <h3>fetch_onchain_and_news.py</h3>
+            <p>整合 DeFiLlama / Blockchair / mempool.space / Etherscan，多链流动与新闻一览。</p>
+            <footer>
+              <code>python fetch_onchain_and_news.py</code>
+              <small>输出 global_onchain_news_snapshot.json</small>
+            </footer>
+          </article>
+          <article class="card">
+            <h3>获取数据.py</h3>
+            <p>OKX 日线行情 + 布林、RSI、DMI、ATR% 指标，生成信号与可视化素材。</p>
+            <footer>
+              <code>python 获取数据.py</code>
+              <small>输出 signals_60d.json / atr_metrics.json / eth_okx_daily.png</small>
+            </footer>
+          </article>
+          <article class="card">
+            <h3>model_analysis.py</h3>
+            <p>调用 Gemini / DeepSeek，基于上述数据生成《链上日报》与邮件版本。</p>
+            <footer>
+              <code>python model_analysis.py</code>
+              <small>输出 model_analysis.md / model_email_body.md</small>
+            </footer>
+          </article>
+        </div>
+      </section>
+
+      <section id="visuals" class="panel">
+        <div class="panel__header">
+          <h2>视觉快照</h2>
+          <p>直接使用脚本产出的 PNG，快速了解当日多空与链上走势。</p>
+        </div>
+        <div class="gallery">
+          <figure class="gallery__item">
+            <img
+              src="./eth_open_interest_liquidations.png"
+              alt="Open Interest 与 Liquidations"
+              loading="lazy"
+              data-hide-on-error="true"
+            />
+            <figcaption>永续持仓与多空爆仓</figcaption>
+          </figure>
+          <figure class="gallery__item">
+            <img
+              src="./eth_okx_daily.png"
+              alt="OKX ETH 日线指标"
+              loading="lazy"
+              data-hide-on-error="true"
+            />
+            <figcaption>OKX 日线指标组合</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="metrics" class="panel">
+        <div class="panel__header">
+          <h2>链上与衍生品指标</h2>
+          <p>来自 JSON 数据的最新趋势，可随着脚本更新自动刷新。</p>
+        </div>
+        <div class="charts">
+          <article class="chart-card">
+            <header>
+              <h3>ATR% 波动率</h3>
+              <p>结合价格与 ATR% 判断波动区间</p>
+            </header>
+            <canvas id="atrChart" height="240"></canvas>
+          </article>
+          <article class="chart-card">
+            <header>
+              <h3>Open Interest 与成交量</h3>
+              <p>永续持仓与成交量同向变动提示杠杆变化</p>
+            </header>
+            <canvas id="oiChart" height="240"></canvas>
+          </article>
+          <article class="chart-card">
+            <header>
+              <h3>多空爆仓对比</h3>
+              <p>按美元计价的长短向爆仓规模</p>
+            </header>
+            <canvas id="liqChart" height="240"></canvas>
+          </article>
+        </div>
+      </section>
+
+      <section id="analysis" class="panel">
+        <div class="panel__header">
+          <h2>最新 AI 日报</h2>
+          <p>来自 model_analysis.md，可随脚本输出自动更新。</p>
+          <button id="toggleAnalysis" class="pill pill--ghost">展开全文</button>
+        </div>
+        <div class="panel__content">
+          <article id="analysisContent" class="markdown">
+            <p>正在加载 AI 分析...</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="contact" class="panel">
+        <div class="panel__header">
+          <h2>下一步与部署</h2>
+          <p>将整个仓库推送至 GitHub 并连接 Vercel，即可自动部署静态站点。</p>
+        </div>
+        <ul class="steps">
+          <li>1. 运行脚本生成最新 JSON / PNG / Markdown。</li>
+          <li>2. `git add . && git commit -m "update data"` 推送到 GitHub。</li>
+          <li>3. 在 Vercel 选择该仓库，Framework 选 “Other”，Build Command 留空，Output 为根目录。</li>
+          <li>4. 如需将网页放在子路径，可在 Vercel 中设置重写规则或调整 `index.html` 位置。</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>© <span id="year"></span> NewETH · Web3 投研实验</p>
+    </footer>
+  </body>
+</html>
