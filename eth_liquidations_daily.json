@@ -1,138 +1,5 @@
 [
   {
-    "date": "2025-09-28",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-09-29",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-09-30",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-10-01",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-10-02",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-10-03",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-10-04",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-10-05",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-10-06",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-10-07",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-10-08",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-10-09",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-10-10",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-10-11",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-10-12",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-10-13",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-10-14",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-10-15",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
-    "date": "2025-10-16",
-    "long_liquidations_usd": 0.0,
-    "short_liquidations_usd": 0.0,
-    "long_liquidations_sz": 0.0,
-    "short_liquidations_sz": 0.0
-  },
-  {
     "date": "2025-10-17",
     "long_liquidations_usd": 0.0,
     "short_liquidations_usd": 0.0,
@@ -204,16 +71,149 @@
   },
   {
     "date": "2025-10-27",
-    "long_liquidations_usd": 111836659.3,
-    "short_liquidations_usd": 45526408.41,
-    "long_liquidations_sz": 26923.35,
-    "short_liquidations_sz": 10805.43
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
   },
   {
     "date": "2025-10-28",
-    "long_liquidations_usd": 126617389.14,
-    "short_liquidations_usd": 59477129.44,
-    "long_liquidations_sz": 30737.77,
-    "short_liquidations_sz": 14144.02
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-10-29",
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-10-30",
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-10-31",
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-11-01",
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-11-02",
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-11-03",
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-11-04",
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-11-05",
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-11-06",
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-11-07",
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-11-08",
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-11-09",
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-11-10",
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-11-11",
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-11-12",
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-11-13",
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-11-14",
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
+  },
+  {
+    "date": "2025-11-15",
+    "long_liquidations_usd": 437824.01,
+    "short_liquidations_usd": 15011.83,
+    "long_liquidations_sz": 138.04,
+    "short_liquidations_sz": 4.72
+  },
+  {
+    "date": "2025-11-16",
+    "long_liquidations_usd": 159617006.25,
+    "short_liquidations_usd": 66956595.88,
+    "long_liquidations_sz": 50422.78,
+    "short_liquidations_sz": 20788.02
   }
 ]
