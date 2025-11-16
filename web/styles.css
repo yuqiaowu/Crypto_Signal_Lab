@@ -193,24 +193,8 @@ code {
   font-size: 0.85rem;
 }
 
-.gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 24px;
-}
-
-.gallery__item {
-  margin: 0;
-}
-
-.gallery__item.is-hidden {
-  display: none;
-}
-
-.gallery__item figcaption {
-  margin-top: 12px;
-  color: var(--muted);
-  text-align: center;
+.charts--visuals {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
 .charts {

@@ -96,27 +96,28 @@
       <section id="visuals" class="panel">
         <div class="panel__header">
           <h2>视觉快照</h2>
-          <p>直接使用脚本产出的 PNG，快速了解当日多空与链上走势。</p>
+          <p>直接从 JSON 绘制互动图表，不再依赖 PNG。</p>
         </div>
-        <div class="gallery">
-          <figure class="gallery__item">
-            <img
-              src="./eth_open_interest_liquidations.png"
-              alt="Open Interest 与 Liquidations"
-              loading="lazy"
-              data-hide-on-error="true"
-            />
-            <figcaption>永续持仓与多空爆仓</figcaption>
-          </figure>
-          <figure class="gallery__item">
-            <img
-              src="./eth_okx_daily.png"
-              alt="OKX ETH 日线指标"
-              loading="lazy"
-              data-hide-on-error="true"
-            />
-            <figcaption>OKX 日线指标组合</figcaption>
-          </figure>
+        <div class="charts charts--visuals">
+          <article class="chart-card">
+            <header>
+              <h3>永续持仓 + 多空爆仓</h3>
+              <p>Close 与 Open Interest 联动，叠加多空爆仓规模</p>
+            </header>
+            <canvas id="perpSnapshotChart" height="320"></canvas>
+            <p class="chart-card__hint">数据源：atr_metrics / open_interest / liquidations</p>
+          </article>
+          <article class="chart-card">
+            <header>
+              <h3>OKX 日线信号（signals_60d.json）</h3>
+              <p>价格、均线、RSI、星级信号一屏查看</p>
+            </header>
+            <canvas id="signalsChart" height="320"></canvas>
+            <div id="signalsFallback" class="chart-fallback">
+              运行 <code>python 获取数据.py</code> 生成 <code>signals_60d.json</code> 后即可查看互动图表。
+            </div>
+            <div id="signalHighlights" class="highlight-grid"></div>
+          </article>
         </div>
       </section>
 

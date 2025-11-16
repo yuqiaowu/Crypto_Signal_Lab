@@ -23,6 +23,9 @@ const percentFormatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 2,
 });
 
+const signalsFallbackEl = document.getElementById('signalsFallback');
+const signalHighlightsEl = document.getElementById('signalHighlights');
+
 document.addEventListener('DOMContentLoaded', () => {
   const yearEl = document.getElementById('year');
   if (yearEl) {
@@ -30,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   setupAnalysisToggle();
-  setupImageFallbacks();
   loadMarkdown('./README.md', markdownTargets.readme);
   loadMarkdown('./model_analysis.md', markdownTargets.analysis, true);
   loadData();
@@ -51,26 +53,30 @@ function setupAnalysisToggle() {
   });
 }
 
-function setupImageFallbacks() {
-  document.querySelectorAll('img[data-hide-on-error="true"]').forEach((img) => {
-    img.addEventListener('error', () => {
-      const parent = img.closest('.gallery__item');
-      if (parent) parent.classList.add('is-hidden');
-    });
-  });
-}
-
 async function loadData() {
   try {
-    const [atr, oi, liq] = await Promise.all([
+    const [atrRes, oiRes, liqRes, signalsRes] = await Promise.allSettled([
       fetchJSON('./atr_metrics.json'),
       fetchJSON('./eth_open_interest_history.json'),
       fetchJSON('./eth_liquidations_daily.json'),
+      fetchJSON('./signals_60d.json'),
     ]);
+
+    if (atrRes.status !== 'fulfilled' || oiRes.status !== 'fulfilled' || liqRes.status !== 'fulfilled') {
+      throw new Error('必要的 JSON 资源缺失，请先运行数据拉取脚本并重新部署。');
+    }
+
+    const atr = atrRes.value;
+    const oi = oiRes.value;
+    const liq = liqRes.value;
+    const signals = signalsRes.status === 'fulfilled' ? signalsRes.value : null;
+
     updateHero(atr, oi);
     renderAtrChart(atr);
     renderOiChart(oi);
     renderLiqChart(liq);
+    renderPerpSnapshotChart(atr, oi, liq);
+    renderSignalsChart(signals);
   } catch (error) {
     console.error('加载数据失败', error);
   }
@@ -315,4 +321,285 @@ function renderLiqChart(data) {
       },
     },
   });
+}
+
+function renderPerpSnapshotChart(atrData, oiData, liqData) {
+  const ctx = document.getElementById('perpSnapshotChart');
+  if (!ctx || !Array.isArray(oiData) || !atrData?.series) return;
+  charts.perpSnapshot?.destroy();
+
+  const closeMap = new Map(atrData.series.map((item) => [item.date, item.close]));
+  const liqMap = new Map((Array.isArray(liqData) ? liqData : []).map((item) => [item.date, item]));
+
+  const merged = oiData
+    .map((row) => {
+      const close = closeMap.get(row.date);
+      const liqRow = liqMap.get(row.date);
+      return {
+        date: row.date,
+        openInterest: typeof row.open_interest_usd === 'number' ? row.open_interest_usd / 1e9 : null,
+        close: typeof close === 'number' ? close : null,
+        longLiq: liqRow?.long_liquidations_usd ? liqRow.long_liquidations_usd / 1e6 : 0,
+        shortLiq: liqRow?.short_liquidations_usd ? liqRow.short_liquidations_usd / 1e6 : 0,
+      };
+    })
+    .filter((row) => row.openInterest !== null && row.close !== null);
+
+  if (!merged.length) {
+    return;
+  }
+
+  charts.perpSnapshot = new Chart(ctx, {
+    data: {
+      datasets: [
+        {
+          type: 'line',
+          label: 'Close (USD)',
+          data: merged.map((d) => ({ x: d.date, y: d.close })),
+          borderColor: '#ffffff',
+          tension: 0.25,
+          yAxisID: 'price',
+          pointRadius: 0,
+        },
+        {
+          type: 'line',
+          label: 'Open Interest (B USD)',
+          data: merged.map((d) => ({ x: d.date, y: d.openInterest })),
+          borderColor: '#4ad5ff',
+          backgroundColor: 'rgba(74,213,255,0.35)',
+          fill: false,
+          yAxisID: 'oi',
+          pointRadius: 0,
+        },
+        {
+          type: 'bar',
+          label: 'Long Liq (M USD)',
+          data: merged.map((d) => ({ x: d.date, y: d.longLiq })),
+          backgroundColor: 'rgba(74,213,255,0.4)',
+          yAxisID: 'liq',
+          stack: 'liq',
+          order: 3,
+        },
+        {
+          type: 'bar',
+          label: 'Short Liq (M USD)',
+          data: merged.map((d) => ({ x: d.date, y: d.shortLiq })),
+          backgroundColor: 'rgba(255,119,146,0.45)',
+          yAxisID: 'liq',
+          stack: 'liq',
+          order: 3,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: {
+          type: 'time',
+          time: { parser: 'yyyy-MM-dd', tooltipFormat: 'yyyy-MM-dd' },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+        },
+        price: {
+          position: 'left',
+          ticks: {
+            callback: (value) => `$${Number(value).toLocaleString('en-US')}`,
+            color: '#ccc',
+          },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+        },
+        oi: {
+          position: 'right',
+          ticks: {
+            callback: (value) => `${Number(value).toFixed(1)}B`,
+            color: '#ccc',
+          },
+          grid: { drawOnChartArea: false },
+        },
+        liq: {
+          position: 'right',
+          ticks: {
+            callback: (value) => `${Number(value).toFixed(0)}M`,
+            color: '#ccc',
+          },
+          grid: { drawOnChartArea: false },
+        },
+      },
+      plugins: {
+        legend: { labels: { color: '#fff' } },
+      },
+    },
+  });
+}
+
+function renderSignalsChart(data) {
+  const canvas = document.getElementById('signalsChart');
+  if (!canvas) return;
+  charts.signals?.destroy();
+
+  if (!Array.isArray(data) || data.length === 0) {
+    canvas.classList.add('is-hidden');
+    signalsFallbackEl?.classList.remove('is-hidden');
+    updateSignalHighlights(null);
+    return;
+  }
+
+  canvas.classList.remove('is-hidden');
+  signalsFallbackEl?.classList.add('is-hidden');
+
+  const sorted = [...data]
+    .filter((d) => d.date)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  charts.signals = new Chart(canvas, {
+    data: {
+      datasets: [
+        {
+          type: 'line',
+          label: 'Close (USD)',
+          data: sorted.map((d) => ({ x: d.date, y: d.close })),
+          borderColor: '#ffffff',
+          yAxisID: 'price',
+          tension: 0.25,
+          pointRadius: 0,
+        },
+        {
+          type: 'line',
+          label: 'MA20',
+          data: sorted.map((d) => ({ x: d.date, y: d.ma_20 })),
+          borderColor: '#7c5dff',
+          borderDash: [4, 4],
+          yAxisID: 'price',
+          tension: 0.2,
+          pointRadius: 0,
+        },
+        {
+          type: 'line',
+          label: 'MA60',
+          data: sorted.map((d) => ({ x: d.date, y: d.ma_60 })),
+          borderColor: '#4ad5ff',
+          borderDash: [6, 4],
+          yAxisID: 'price',
+          tension: 0.2,
+          pointRadius: 0,
+        },
+        {
+          type: 'line',
+          label: 'RSI14',
+          data: sorted.map((d) => ({ x: d.date, y: d.rsi14 })),
+          borderColor: '#ffa726',
+          backgroundColor: 'rgba(255,167,38,0.1)',
+          yAxisID: 'osc',
+          tension: 0.3,
+          pointRadius: 0,
+          fill: true,
+        },
+        {
+          type: 'scatter',
+          label: 'Buy Stars',
+          data: sorted
+            .filter((d) => d.buy_stars > 0 && typeof d.close === 'number')
+            .map((d) => ({ x: d.date, y: d.close, r: 4 + d.buy_stars * 1.5 })),
+          yAxisID: 'price',
+          backgroundColor: '#66bb6a',
+          pointStyle: 'triangle',
+          showLine: false,
+        },
+        {
+          type: 'scatter',
+          label: 'Sell Stars',
+          data: sorted
+            .filter((d) => d.sell_stars > 0 && typeof d.close === 'number')
+            .map((d) => ({ x: d.date, y: d.close, r: 4 + d.sell_stars * 1.5 })),
+          yAxisID: 'price',
+          backgroundColor: '#ef5350',
+          pointStyle: 'rectRot',
+          showLine: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: {
+          type: 'time',
+          time: { parser: 'yyyy-MM-dd', tooltipFormat: 'yyyy-MM-dd' },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+        },
+        price: {
+          position: 'left',
+          ticks: {
+            callback: (value) => `$${Number(value).toLocaleString('en-US')}`,
+            color: '#ccc',
+          },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+        },
+        osc: {
+          position: 'right',
+          suggestedMin: 0,
+          suggestedMax: 100,
+          ticks: {
+            callback: (value) => `${value}`,
+            color: '#ccc',
+          },
+          grid: { drawOnChartArea: false },
+        },
+      },
+      plugins: {
+        legend: { labels: { color: '#fff' } },
+      },
+    },
+  });
+
+  updateSignalHighlights(sorted[sorted.length - 1]);
+}
+
+function updateSignalHighlights(latest) {
+  if (!signalHighlightsEl) return;
+  if (!latest) {
+    signalHighlightsEl.innerHTML =
+      '<div class="highlight-card"><span>提示</span><strong>缺少数据</strong><small>生成 signals_60d.json 后自动更新</small></div>';
+    return;
+  }
+
+  const rows = [
+    {
+      label: 'RSI14',
+      value: latest.rsi14 ?? '--',
+      hint: '超买70 · 超卖30',
+    },
+    {
+      label: 'ATR%14',
+      value: latest.atr_pct_14 ? `${percentFormatter.format(latest.atr_pct_14)}%` : '--',
+      hint: '波动率',
+    },
+    {
+      label: 'Buy Stars',
+      value: latest.buy_stars ?? 0,
+      hint: '0~3 星',
+    },
+    {
+      label: 'Sell Stars',
+      value: latest.sell_stars ?? 0,
+      hint: '0~3 星',
+    },
+    {
+      label: 'Volume/Ma20',
+      value: latest.volume_ratio_ma20 ?? '--',
+      hint: '>=1 表示量能支撑',
+    },
+  ];
+
+  signalHighlightsEl.innerHTML = rows
+    .map(
+      (row) => `
+      <div class="highlight-card">
+        <span>${row.label}</span>
+        <strong>${row.value}</strong>
+        <small>${row.hint}</small>
+      </div>
+    `,
+    )
+    .join('');
 }
