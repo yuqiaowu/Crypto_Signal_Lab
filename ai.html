@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CRYPTO DAILY SIGNAL AI ANALYSIS LAB · AI 日报</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./web/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+    <script src="./web/app.js" type="module" defer></script>
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero__content">
+        <p class="hero__eyebrow">BTC/ETH/SOL/BNB/DOGE</p>
+        <h1>CRYPTO DAILY SIGNAL AI ANALYSIS LAB</h1>
+        <p class="hero__lede">展示 Gemini 生成的最新市场分析与操作建议。</p>
+        <div class="hero__cta">
+          <a class="pill pill--primary" href="ai.html">AI 日报</a>
+          <a class="pill pill--ghost" href="index.html">价格图表</a>
+        </div>
+      </div>
+      <div class="hero__datapoints" id="latestMetrics">
+        <div class="hero-placeholder" aria-hidden="true">
+          <img src="./unnamed.jpg" alt="示意图" loading="lazy" />
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section id="analysis" class="panel">
+        <div class="panel__header">
+          <h2>最新 AI 日报</h2>
+          <p>来自 model_analysis.md，可随脚本输出自动更新。</p>
+        </div>
+        <div class="panel__content">
+          <article id="analysisContent" class="markdown">
+            <p>正在加载 AI 分析...</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>© <span id="year"></span> NewETH · Web3 投研实验</p>
+    </footer>
+  </body>
+  </html>

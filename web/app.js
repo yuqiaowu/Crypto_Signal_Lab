@@ -6,6 +6,12 @@ const heroFieldMap = {
   oi_date: document.querySelector('[data-field="oi_date"]'),
 };
 
+const heroSparkMap = {
+  atr: document.getElementById('sparkAtr'),
+  atrRange: document.getElementById('sparkAtrRange'),
+  oi: document.getElementById('sparkOi'),
+};
+
 const markdownTargets = {
   readme: document.getElementById('readmeContent'),
   analysis: document.getElementById('analysisContent'),
@@ -34,8 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setupAnalysisToggle();
   loadMarkdown('./README.md', markdownTargets.readme);
-  loadMarkdown('./model_analysis.md', markdownTargets.analysis, true);
+  loadMarkdown('./model_analysis.md', markdownTargets.analysis, false);
   loadData();
+  bindHeroScroll();
 });
 
 function setupAnalysisToggle() {
@@ -72,11 +79,14 @@ async function loadData() {
     const signals = signalsRes.status === 'fulfilled' ? signalsRes.value : null;
 
     updateHero(atr, oi);
+    renderHeroSparklines(atr, oi);
     renderAtrChart(atr);
     renderOiChart(oi);
     renderLiqChart(liq);
     renderPerpSnapshotChart(atr, oi, liq);
     renderSignalsChart(signals);
+    // 在合并面板中渲染火柴线小图
+    renderPanelSparklines(atr, oi);
   } catch (error) {
     console.error('加载数据失败', error);
   }
@@ -90,6 +100,48 @@ async function fetchJSON(path) {
   return response.json();
 }
 
+function extractGeminiReply(text) {
+  try {
+    // 优先从“### 1. 市场概述”开始（兼容是否带《》）
+    const sectionStartRegex = /^###\s*1\.\s*(?:《)?市场概述(?:》)?/m;
+    const sectionMatch = text.match(sectionStartRegex);
+    if (sectionMatch) {
+      const idx = text.indexOf(sectionMatch[0]);
+      return text.slice(idx).trim();
+    }
+
+    // 次选：存在“## Gemini 回复”时，跳过该标题及其后的前言，直接从下一个三级标题开始
+    const headerRegex = /^##\s*Gemini\s*回复\s*$/m;
+    const headerMatch = text.match(headerRegex);
+    if (headerMatch) {
+      const headerIdx = text.indexOf(headerMatch[0]);
+      const afterHeader = text.slice(headerIdx + headerMatch[0].length);
+      const nextH3Regex = /^###\s+/m;
+      const nextH3Match = afterHeader.match(nextH3Regex);
+      if (nextH3Match) {
+        const nextIdx = afterHeader.indexOf(nextH3Match[0]);
+        return afterHeader.slice(nextIdx).trim();
+      }
+      // 如果没有后续三级标题，至少移除“Gemini 回复”行
+      return text.replace(headerRegex, '').trim();
+    }
+
+    // 找不到标记则原样返回
+    return text;
+  } catch (_) {
+    return text;
+  }
+}
+
+// 移除各级标题中的中文书名号《》
+function stripHeadingBrackets(text) {
+  try {
+    return text.replace(/^(\s*#{2,6}\s.*)$/gm, (line) => line.replace(/《([^》]+)》/g, '$1'));
+  } catch (_) {
+    return text;
+  }
+}
+
 async function loadMarkdown(path, target, isLongForm = false) {
   if (!target) return;
   try {
@@ -97,8 +149,23 @@ async function loadMarkdown(path, target, isLongForm = false) {
     if (!response.ok) {
       throw new Error('获取 Markdown 失败');
     }
-    const text = await response.text();
+    let text = await response.text();
+    // 仅在分析日报中展示 Gemini 回复，隐藏提示词与输入 JSON
+    if (path.endsWith('model_analysis.md')) {
+      text = extractGeminiReply(text);
+      text = stripHeadingBrackets(text);
+    }
     target.innerHTML = window.marked.parse(text, { mangle: false, headerIds: false });
+
+    // 如果是 AI 日报，尝试从正文提取日期并更新标题
+    if (path.endsWith('model_analysis.md')) {
+      const dateMatch = text.match(/今天是(\d{4}-\d{2}-\d{2})/);
+      const h2 = document.querySelector('#analysis .panel__header h2');
+      if (h2) {
+        const dateStr = dateMatch?.[1] || new Date().toISOString().slice(0, 10);
+        h2.textContent = `${dateStr} 最新 AI 日报`;
+      }
+    }
     if (isLongForm) {
       target.classList.add('is-collapsed');
     }
@@ -111,20 +178,145 @@ async function loadMarkdown(path, target, isLongForm = false) {
 function updateHero(atrData, oiData) {
   if (atrData?.summary?.latest) {
     const latest = atrData.summary.latest;
-    heroFieldMap.atr_pct.textContent = `${percentFormatter.format(latest.atr_pct)}%`;
-    heroFieldMap.atr_date.textContent = latest.date;
+    if (heroFieldMap.atr_pct) heroFieldMap.atr_pct.textContent = `${percentFormatter.format(latest.atr_pct)}%`;
+    if (heroFieldMap.atr_date) heroFieldMap.atr_date.textContent = latest.date;
     if (typeof atrData.summary.min_pct === 'number' && typeof atrData.summary.max_pct === 'number') {
-      heroFieldMap.atr_range.textContent = `${percentFormatter.format(
-        atrData.summary.min_pct,
-      )}% - ${percentFormatter.format(atrData.summary.max_pct)}%`;
+      if (heroFieldMap.atr_range)
+        heroFieldMap.atr_range.textContent = `${percentFormatter.format(
+          atrData.summary.min_pct,
+        )}% - ${percentFormatter.format(atrData.summary.max_pct)}%`;
     }
   }
 
   if (Array.isArray(oiData) && oiData.length > 0) {
     const latest = oiData[oiData.length - 1];
-    heroFieldMap.open_interest.textContent = currencyCompact.format(latest.open_interest_usd);
-    heroFieldMap.oi_date.textContent = latest.date;
+    if (heroFieldMap.open_interest)
+      heroFieldMap.open_interest.textContent = currencyCompact.format(latest.open_interest_usd);
+    if (heroFieldMap.oi_date) heroFieldMap.oi_date.textContent = latest.date;
   }
+}
+
+function renderHeroSparklines(atrData, oiData) {
+  try {
+    // ATR sparkline using last 60 days
+    if (heroSparkMap.atr && atrData?.series) {
+      charts.sparkAtr?.destroy();
+      const series = [...atrData.series]
+        .filter((d) => d.date && typeof d.atr_pct === 'number')
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(-60);
+      charts.sparkAtr = new Chart(heroSparkMap.atr, {
+        type: 'line',
+        data: { datasets: [{ data: series.map((d) => ({ x: d.date, y: d.atr_pct })), borderColor: '#7c5dff', tension: 0.25, pointRadius: 0, fill: false }] },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false }, tooltip: { enabled: true } },
+          elements: { line: { borderWidth: 2 } },
+          scales: { x: { type: 'time', display: false }, y: { display: false } },
+        },
+      });
+    }
+
+    // ATR range sparkline (same data for quick trend glance)
+    if (heroSparkMap.atrRange && atrData?.series) {
+      charts.sparkAtrRange?.destroy();
+      const series = [...atrData.series]
+        .filter((d) => d.date && typeof d.atr_pct === 'number')
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(-180);
+      charts.sparkAtrRange = new Chart(heroSparkMap.atrRange, {
+        type: 'line',
+        data: { datasets: [{ data: series.map((d) => ({ x: d.date, y: d.atr_pct })), borderColor: '#4ad5ff', tension: 0.25, pointRadius: 0, fill: false }] },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false }, tooltip: { enabled: true } },
+          elements: { line: { borderWidth: 2 } },
+          scales: { x: { type: 'time', display: false }, y: { display: false } },
+        },
+      });
+    }
+
+    // Open interest sparkline using last 60 days
+    if (heroSparkMap.oi && Array.isArray(oiData)) {
+      charts.sparkOi?.destroy();
+      const series = [...oiData]
+        .filter((d) => d.date && typeof d.open_interest_usd === 'number')
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(-60);
+      charts.sparkOi = new Chart(heroSparkMap.oi, {
+        type: 'line',
+        data: { datasets: [{ data: series.map((d) => ({ x: d.date, y: d.open_interest_usd / 1e9 })), borderColor: '#ffffff', tension: 0.25, pointRadius: 0, fill: false }] },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false }, tooltip: { enabled: true } },
+          elements: { line: { borderWidth: 2 } },
+          scales: { x: { type: 'time', display: false }, y: { display: false } },
+        },
+      });
+    }
+  } catch (err) {
+    console.error('渲染火柴线失败', err);
+  }
+}
+
+// 额外渲染图表总览中的火柴线（如果存在）
+function renderPanelSparklines(atrData, oiData) {
+  const sparkAtrPanel = document.getElementById('sparkAtrPanel');
+  const sparkAtrRangePanel = document.getElementById('sparkAtrRangePanel');
+  const sparkOiPanel = document.getElementById('sparkOiPanel');
+
+  try {
+    if (sparkAtrPanel && atrData?.series) {
+      charts.sparkAtrPanel?.destroy();
+      const series = [...atrData.series]
+        .filter((d) => d.date && typeof d.atr_pct === 'number')
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(-60);
+      charts.sparkAtrPanel = new Chart(sparkAtrPanel, {
+        type: 'line',
+        data: { datasets: [{ data: series.map((d) => ({ x: d.date, y: d.atr_pct })), borderColor: '#7c5dff', tension: 0.25, pointRadius: 0, fill: false }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { type: 'time', display: false }, y: { display: false } } },
+      });
+    }
+
+    if (sparkAtrRangePanel && atrData?.series) {
+      charts.sparkAtrRangePanel?.destroy();
+      const series = [...atrData.series]
+        .filter((d) => d.date && typeof d.atr_pct === 'number')
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(-180);
+      charts.sparkAtrRangePanel = new Chart(sparkAtrRangePanel, {
+        type: 'line',
+        data: { datasets: [{ data: series.map((d) => ({ x: d.date, y: d.atr_pct })), borderColor: '#4ad5ff', tension: 0.25, pointRadius: 0, fill: false }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { type: 'time', display: false }, y: { display: false } } },
+      });
+    }
+
+    if (sparkOiPanel && Array.isArray(oiData)) {
+      charts.sparkOiPanel?.destroy();
+      const series = [...oiData]
+        .filter((d) => d.date && typeof d.open_interest_usd === 'number')
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(-60);
+      charts.sparkOiPanel = new Chart(sparkOiPanel, {
+        type: 'line',
+        data: { datasets: [{ data: series.map((d) => ({ x: d.date, y: d.open_interest_usd / 1e9 })), borderColor: '#ffffff', tension: 0.25, pointRadius: 0, fill: false }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { type: 'time', display: false }, y: { display: false } } },
+      });
+    }
+  } catch (err) {
+    console.error('渲染图表总览火柴线失败', err);
+  }
+}
+
+function bindHeroScroll() {
+  const metricsSection = document.getElementById('charts-overview');
+  const container = document.getElementById('latestMetrics');
+  if (!metricsSection || !container) return;
+  container.querySelectorAll('.hero-card').forEach((card) => {
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', () => metricsSection.scrollIntoView({ behavior: 'smooth' }));
+  });
 }
 
 function renderAtrChart(atrData) {
