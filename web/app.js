@@ -62,11 +62,12 @@ function setupAnalysisToggle() {
 
 async function loadData() {
   try {
-    const [atrRes, oiRes, liqRes, signalsRes] = await Promise.allSettled([
+    const [atrRes, oiRes, liqRes, signalsRes, snapshotRes] = await Promise.allSettled([
       fetchJSON('./atr_metrics.json'),
       fetchJSON('./eth_open_interest_history.json'),
       fetchJSON('./eth_liquidations_daily.json'),
       fetchJSON('./signals_60d.json'),
+      fetchJSON('./global_onchain_news_snapshot.json'),
     ]);
 
     if (atrRes.status !== 'fulfilled' || oiRes.status !== 'fulfilled' || liqRes.status !== 'fulfilled') {
@@ -77,6 +78,7 @@ async function loadData() {
     const oi = oiRes.value;
     const liq = liqRes.value;
     const signals = signalsRes.status === 'fulfilled' ? signalsRes.value : null;
+    const snapshot = snapshotRes.status === 'fulfilled' ? snapshotRes.value : null;
 
     updateHero(atr, oi);
     renderHeroSparklines(atr, oi);
@@ -87,6 +89,8 @@ async function loadData() {
     renderSignalsChart(signals);
     // 在合并面板中渲染火柴线小图
     renderPanelSparklines(atr, oi);
+    // 渲染恐慌与贪婪指数
+    renderFearChart(snapshot);
   } catch (error) {
     console.error('加载数据失败', error);
   }
@@ -582,6 +586,59 @@ function renderOiChart(data) {
       },
     },
   });
+}
+
+// 恐慌与贪婪指数（BTC）
+function renderFearChart(snapshot) {
+  const ctx = document.getElementById('fearChart');
+  if (!ctx) return;
+  try {
+    charts.fear?.destroy();
+    const series = snapshot?.fear_greed?.series;
+    if (!Array.isArray(series) || series.length === 0) return;
+    // 将时间序列按时间升序排列
+    const points = [...series]
+      .map((d) => ({
+        x: new Date(Number(d.timestamp) * 1000),
+        y: typeof d.value === 'number' ? d.value : null,
+      }))
+      .filter((p) => p.y !== null)
+      .sort((a, b) => a.x - b.x);
+
+    charts.fear = new Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [
+          {
+            label: 'Fear & Greed Index',
+            data: points,
+            borderColor: '#f0b90b',
+            backgroundColor: 'rgba(240,185,11,0.15)',
+            tension: 0.25,
+            pointRadius: 0,
+            fill: true,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: { type: 'time', time: { tooltipFormat: 'yyyy-MM-dd' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+          y: {
+            min: 0,
+            max: 100,
+            ticks: { stepSize: 20, color: '#ccc' },
+            grid: { color: 'rgba(255,255,255,0.04)' },
+          },
+        },
+        plugins: { legend: { labels: { color: '#fff' } } },
+        elements: { line: { borderWidth: 2 } },
+      },
+    });
+  } catch (error) {
+    console.error('渲染恐慌指数失败', error);
+  }
 }
 
 function renderLiqChart(data) {
