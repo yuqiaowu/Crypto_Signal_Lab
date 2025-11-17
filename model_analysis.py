@@ -5,6 +5,7 @@ import os
 import time
 import re
 from pathlib import Path
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 import requests
@@ -532,6 +533,8 @@ def save_report(payload: Dict[str, Any], analysis_text: str, path: Path, model_l
                 f.write("```json\n" + content + "\n```\n\n")
         f.write(f"## {model_label} 回复\n\n")
         f.write(analysis_text or "(无回复)")
+        ts = datetime.now(timezone.utc).isoformat()
+        f.write("\n\n---\nGenerated at: " + ts + " (UTC)\n")
 
 
 def _format_email_markdown(text: str) -> str:
@@ -552,6 +555,8 @@ def save_email_body(analysis_text: str, path: Path) -> None:
     body = _format_email_markdown(analysis_text)
     with path.open("w", encoding="utf-8") as f:
         f.write(body)
+        ts = datetime.now(timezone.utc).isoformat()
+        f.write("\n\n---\nGenerated at: " + ts + " (UTC)\n")
 
 
 def main() -> None:
