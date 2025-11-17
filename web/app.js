@@ -394,7 +394,34 @@ function renderAtrChart(atrData) {
   if (!ctx) return;
   charts.atr?.destroy();
 
-  const series = [...atrData.series].sort((a, b) => new Date(a.date) - new Date(b.date));
+  // 使用最近 360 天的数据窗口
+  const series = [...atrData.series]
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .slice(-360);
+
+  // 计算布林带（默认 20 周期，2 倍标准差，基于收盘价）
+  const bbPeriod = 20;
+  const bbK = 2;
+  const closes = series.map((d) => d.close);
+  const dates = series.map((d) => d.date);
+  const bbMiddle = [];
+  const bbUpper = [];
+  const bbLower = [];
+  for (let i = 0; i < closes.length; i++) {
+    if (i < bbPeriod - 1) {
+      bbMiddle.push(null);
+      bbUpper.push(null);
+      bbLower.push(null);
+    } else {
+      const windowVals = closes.slice(i - bbPeriod + 1, i + 1);
+      const mean = windowVals.reduce((s, v) => s + v, 0) / bbPeriod;
+      const variance = windowVals.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / bbPeriod;
+      const stdDev = Math.sqrt(variance);
+      bbMiddle.push(mean);
+      bbUpper.push(mean + bbK * stdDev);
+      bbLower.push(mean - bbK * stdDev);
+    }
+  }
   charts.atr = new Chart(ctx, {
     type: 'line',
     data: {
@@ -419,6 +446,35 @@ function renderAtrChart(atrData) {
           yAxisID: 'y1',
           pointRadius: 0,
         },
+        {
+          label: '布林带中轨 (20)',
+          data: dates.map((x, i) => ({ x, y: bbMiddle[i] })),
+          borderColor: '#f0c36d',
+          borderDash: [5, 4],
+          tension: 0.2,
+          fill: false,
+          yAxisID: 'y1',
+          pointRadius: 0,
+        },
+        {
+          label: '布林带上轨 (20,2)',
+          data: dates.map((x, i) => ({ x, y: bbUpper[i] })),
+          borderColor: '#f0c36d',
+          tension: 0.2,
+          fill: false,
+          yAxisID: 'y1',
+          pointRadius: 0,
+        },
+        {
+          label: '布林带下轨 (20,2)',
+          data: dates.map((x, i) => ({ x, y: bbLower[i] })),
+          borderColor: '#f0c36d',
+          borderDash: [3, 3],
+          tension: 0.2,
+          fill: false,
+          yAxisID: 'y1',
+          pointRadius: 0,
+        },
       ],
     },
     options: {
@@ -429,6 +485,15 @@ function renderAtrChart(atrData) {
           type: 'time',
           time: { parser: 'yyyy-MM-dd', tooltipFormat: 'yyyy-MM-dd' },
           grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: {
+            maxRotation: 0,
+            color: '#bbb',
+            callback: (value, index, ticks) => {
+              const label = ticks[index]?.label;
+              const step = Math.ceil(ticks.length / 6);
+              return index % step === 0 ? label : '';
+            },
+          },
         },
         y: {
           position: 'left',

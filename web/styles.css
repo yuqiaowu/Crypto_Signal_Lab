@@ -245,6 +245,11 @@ code {
   gap: 24px;
 }
 
+/* 让单个图卡跨两列，占据整行 */
+.chart-card--wide {
+  grid-column: 1 / -1;
+}
+
 /* 图表区块行间距：两行网格之间留出空间，提升层次感 */
 #charts-overview .charts + .charts {
   margin-top: 28px;

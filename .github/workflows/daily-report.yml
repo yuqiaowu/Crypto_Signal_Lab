@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       MPLBACKEND: Agg
     steps:
@@ -43,6 +45,17 @@ jobs:
           python 获取数据.py
           python fetch_onchain_and_news.py
 
+      - name: Upload datasets artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: datasets-${{ github.run_id }}
+          path: |
+            signals_60d.json
+            atr_metrics.json
+            eth_open_interest_history.json
+            eth_liquidations_daily.json
+            eth_okx_daily.png
+
       - name: Run model analysis
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -59,9 +72,20 @@ jobs:
           test -f model_email_body.md || echo "模型分析暂不可用（配额/网络限制）。请参考链上数据与指标附件。" > model_email_body.md
           test -f model_analysis.md || echo "# 模型分析报告\n\n(本次未生成，可能因配额或网络限制。)" > model_analysis.md
 
+      - name: Auto-commit updated datasets
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: update datasets (ATR 360d, daily refresh)"
+          file_pattern: |
+            signals_60d.json
+            atr_metrics.json
+            eth_open_interest_history.json
+            eth_liquidations_daily.json
+            eth_okx_daily.png
+
       - name: Send email
         if: always()
-        uses: dawidd6/action-send-mail@v3
+        uses: dawidd6/action-send-mail@v6
         with:
           server_address: smtp.gmail.com
           server_port: 465
@@ -70,6 +94,7 @@ jobs:
           subject: "ETH 每日报告"
           from: "${{ secrets.MAIL_FROM }}"
           to: "${{ secrets.MAIL_TO }}"
+          content_type: text/html
           convert_markdown: true
           html_body: file://model_email_body.md
           attachments: |

@@ -6,12 +6,19 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, List, Optional
 
 import ccxt
-import matplotlib.dates as mdates
-import matplotlib.pyplot as plt
-# Configure fonts to support CJK glyphs when available
-plt.rcParams['font.sans-serif'] = ['Noto Sans CJK SC', 'SimHei', 'DejaVu Sans']
-plt.rcParams['axes.unicode_minus'] = False
-from matplotlib.patches import Patch
+# 尝试加载 matplotlib 进行可视化；如环境缺失则降级为仅导出数据
+try:
+    import matplotlib.dates as mdates
+    import matplotlib.pyplot as plt
+    # Configure fonts to support CJK glyphs when available
+    plt.rcParams['font.sans-serif'] = ['Noto Sans CJK SC', 'SimHei', 'DejaVu Sans']
+    plt.rcParams['axes.unicode_minus'] = False
+    from matplotlib.patches import Patch
+except Exception as _mpl_err:
+    plt = None
+    mdates = None
+    Patch = None
+    print(f"Matplotlib/Numpy 未就绪，绘图将跳过：{_mpl_err}")
 import numpy as np
 import pandas as pd
 import os
@@ -1276,26 +1283,30 @@ def main() -> None:
         export_liquidation_history(liquidation_daily)
 
     export_recent_signals(df, lookback=60)
-    export_atr_metrics(df, period=14, lookback=180, path="atr_metrics.json")
+    # 导出 ATR 指标至 360 天，以满足前端 360 天可视化需求
+    export_atr_metrics(df, period=14, lookback=360, path="atr_metrics.json")
 
     low_high_mask = ((df["price_percentile_20"] < 0.10) & (df["volume_ratio_ma_20"] > 2.0)).fillna(False)
     high_high_mask = ((df["price_percentile_20"] > 0.90) & (df["volume_ratio_ma_20"] > 2.0)).fillna(False)
 
-    plot_price_volume_rsi(
-        df,
-        output_path="eth_okx_daily.png",
-        ma_windows=ma_windows,
-        plot_mas=False,
-        atr_period=14,
-    )
+    if plt is not None:
+        plot_price_volume_rsi(
+            df,
+            output_path="eth_okx_daily.png",
+            ma_windows=ma_windows,
+            plot_mas=False,
+            atr_period=14,
+        )
 
-    plot_open_interest_and_liquidations(
-        df,
-        oi_df=oi_history,
-        liquidation_df=liquidation_daily,
-        output_path="eth_open_interest_liquidations.png",
-        show=False,
-    )
+        plot_open_interest_and_liquidations(
+            df,
+            oi_df=oi_history,
+            liquidation_df=liquidation_daily,
+            output_path="eth_open_interest_liquidations.png",
+            show=False,
+        )
+    else:
+        print("跳过绘图：Matplotlib/Numpy 未安装或未正确加载。")
 
     latest = df.dropna(subset=["close", "volume", "volume_ma_20", "prev_volume_ratio_ma_20"]).iloc[-1]
     prev_ratio = latest["prev_volume_ratio_ma_20"]
