@@ -711,26 +711,48 @@ def export_open_interest_history(
 def export_liquidation_history(
     df: pd.DataFrame,
     path: str = "eth_liquidations_daily.json",
-    lookback: int = 60,
+    lookback: Optional[int] = None,
 ) -> None:
     """
-    导出多空爆仓聚合数据。
+    导出多空爆仓聚合数据，并将新数据与既有历史合并，方便长期观察。
     """
     if df.empty:
         print("未获取到爆仓数据，跳过导出。")
         return
-    subset = df.sort_index().tail(lookback)
-    rows: List[Dict[str, Any]] = []
+
+    # 先读取磁盘上已有的历史，按日期去重
+    history: Dict[str, Dict[str, Any]] = {}
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+            if isinstance(existing, list):
+                for entry in existing:
+                    date_str = entry.get("date")
+                    if isinstance(date_str, str) and date_str:
+                        history[date_str] = entry
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"读取历史爆仓数据失败：{exc}，将覆盖写入新数据。")
+
+    subset = df.sort_index()
+    if lookback:
+        subset = subset.tail(lookback)
+
     for idx, row in subset.iterrows():
-        rows.append(
-            {
-                "date": idx.strftime("%Y-%m-%d"),
-                "long_liquidations_usd": round(float(row.get("liquidation_long_usd", 0.0)), 2),
-                "short_liquidations_usd": round(float(row.get("liquidation_short_usd", 0.0)), 2),
-                "long_liquidations_sz": round(float(row.get("liquidation_long_sz", 0.0)), 4),
-                "short_liquidations_sz": round(float(row.get("liquidation_short_sz", 0.0)), 4),
-            }
-        )
+        date_str = idx.strftime("%Y-%m-%d")
+        history[date_str] = {
+            "date": date_str,
+            "long_liquidations_usd": round(float(row.get("liquidation_long_usd", 0.0)), 2),
+            "short_liquidations_usd": round(float(row.get("liquidation_short_usd", 0.0)), 2),
+            "long_liquidations_sz": round(float(row.get("liquidation_long_sz", 0.0)), 4),
+            "short_liquidations_sz": round(float(row.get("liquidation_short_sz", 0.0)), 4),
+        }
+
+    sorted_dates = sorted(history.keys())
+    if lookback:
+        sorted_dates = sorted_dates[-lookback:]
+    rows = [history[date_str] for date_str in sorted_dates]
+
     with open(path, "w", encoding="utf-8") as f:
         json.dump(rows, f, ensure_ascii=False, indent=2)
     print(f"已导出爆仓聚合数据至 {path}")
