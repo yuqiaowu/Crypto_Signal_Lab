@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import time
+import re
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -299,6 +300,7 @@ def build_payload(
 7. `recent_data` 按时间顺序排列，请务必以最后一条记录视为最新收盘日，并据此判断当前市场状态。
 8. 已额外提供 `latest_ma_relation` 字段，标明最新收盘价相对各条均线的位置（above / below / both / unknown），请在分析中引用该字段验证你的判断。
 9. 请在《市场概述》的开头明确写出今天是 {today_str}（当地时间），确保读者了解分析日期。
+10. 输出必须使用 Markdown 格式：各章节标题使用二级标题（##），要点使用项目符号（-）；不要使用《》包裹标题。
 请输出：
 - 按以下标题输出详细内容（无须额外说明）：
   1. 《市场概述》——布林带、均线、量能综合评价。
@@ -532,8 +534,22 @@ def save_report(payload: Dict[str, Any], analysis_text: str, path: Path, model_l
         f.write(analysis_text or "(无回复)")
 
 
+def _format_email_markdown(text: str) -> str:
+    t = (text or "").strip()
+    if not t:
+        return "(无回复)"
+    date_match = re.search(r"今天是(\d{4}-\d{2}-\d{2})", t)
+    date_str = date_match.group(1) if date_match else time.strftime("%Y-%m-%d", time.localtime())
+    # 标题规范化：将《标题》或前置编号的《标题》转为二级标题
+    t = re.sub(r"^\s*\d+\.\s*《([^》]+)》", r"## \1", t, flags=re.MULTILINE)
+    t = re.sub(r"《([^》]+)》", r"## \1", t)
+    # 在标题前插入空行，便于渲染
+    t = re.sub(r"(?<!\n)\n## ", "\n\n## ", t)
+    header = f"# AI 每日报告（{date_str}）\n"
+    return header + "\n" + t
+
 def save_email_body(analysis_text: str, path: Path) -> None:
-    body = (analysis_text or "").strip() or "(无回复)"
+    body = _format_email_markdown(analysis_text)
     with path.open("w", encoding="utf-8") as f:
         f.write(body)
 
