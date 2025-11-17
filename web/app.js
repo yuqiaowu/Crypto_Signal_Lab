@@ -596,6 +596,15 @@ function renderFearChart(snapshot) {
   const ctx = document.getElementById('fearChart');
   if (!ctx) return;
   try {
+    // 更新标题为“恐慌指数值”，如：恐慌与贪婪指数（BTC）：14（极度恐慌）
+    const titleEl = document.getElementById('fearTitle');
+    const latest = snapshot?.fear_greed?.latest;
+    const value = typeof latest?.value === 'number' ? latest.value : Number(latest?.value);
+    const classification = latest?.classification;
+    if (titleEl) {
+      const valStr = Number.isFinite(value) ? String(value) : '-';
+      titleEl.textContent = `恐慌与贪婪指数（BTC）：${valStr}${classification ? `（${classification}）` : ''}`;
+    }
     charts.fear?.destroy();
     const series = snapshot?.fear_greed?.series;
     if (!Array.isArray(series) || series.length === 0) return;

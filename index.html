@@ -51,7 +51,7 @@
       
 
       <section id="charts-overview">
-        <!-- 第一行：火柴线 + 多空爆仓对比 -->
+        <!-- 第一行：火柴线 + 合约杠杆趋势 + 情绪（恐慌指数） -->
         <div class="charts charts--stack">
           <article class="chart-card">
             <header>
@@ -69,38 +69,38 @@
           </article>
           <article class="chart-card">
             <header>
+              <h3 id="fearTitle">恐慌与贪婪指数（BTC）</h3>
+              <p>近 15 天情绪变化（0 极度恐慌，100 极度贪婪）</p>
+            </header>
+            <canvas id="fearChart" height="140"></canvas>
+          </article>
+        </div>
+
+        <!-- 第二行：并列展示 多空爆仓对比 与 杠杆变化与成交量 -->
+        <div class="charts charts--two-up">
+          <article class="chart-card">
+            <header>
               <h3>多空爆仓对比</h3>
               <p>按美元计价的长短向爆仓规模</p>
             </header>
             <canvas id="liqChart" height="240"></canvas>
           </article>
+          <article class="chart-card">
+            <header>
+              <h3>杠杆变化与成交量</h3>
+              <p>永续持仓与成交量同向变动提示杠杆变化</p>
+            </header>
+            <canvas id="oiChart" height="240"></canvas>
+          </article>
         </div>
-
-        <!-- 第二行：并列放大的两张图（ATR% 与 OI） -->
-        <div class="charts charts--two-up">
+        <!-- 第三行：ATR% 波动率（保留在下方） -->
+        <div class="charts charts--one-up">
           <article class="chart-card chart-card--wide">
             <header>
               <h3>ATR% 波动率</h3>
               <p>结合价格与 ATR% 判断波动区间</p>
             </header>
             <canvas id="atrChart" height="150"></canvas>
-          </article>
-          <article class="chart-card">
-            <header>
-  <h3>杠杆变化与成交量</h3>
-              <p>永续持仓与成交量同向变动提示杠杆变化</p>
-            </header>
-            <canvas id="oiChart" height="240"></canvas>
-          </article>
-        </div>
-        <!-- 新增：恐慌与贪婪指数面板 -->
-        <div class="charts charts--one-up">
-          <article class="chart-card chart-card--wide">
-            <header>
-              <h3>恐慌与贪婪指数（BTC）</h3>
-              <p>近 15 天情绪变化（0 极度恐慌，100 极度贪婪）</p>
-            </header>
-            <canvas id="fearChart" height="140"></canvas>
           </article>
         </div>
       </section>
