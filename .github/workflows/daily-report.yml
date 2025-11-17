@@ -89,6 +89,38 @@ jobs:
           test -f model_email_body.md || echo "模型分析暂不可用（配额/网络限制）。请参考链上数据与指标附件。" > model_email_body.md
           test -f model_analysis.md || echo "# 模型分析报告\n\n(本次未生成，可能因配额或网络限制。)" > model_analysis.md
 
+      - name: Debug diffs against HEAD
+        if: always()
+        run: |
+          echo "== Diff names before auto-commit =="
+          git --no-pager diff --name-only || true
+          echo "== Checksums vs HEAD =="
+          for f in \
+            signals_60d.json \
+            atr_metrics.json \
+            eth_open_interest_history.json \
+            eth_liquidations_daily.json \
+            eth_okx_daily.png \
+            model_analysis.md \
+            model_email_body.md \
+            global_onchain_news_snapshot.json; do
+            if [ -f "$f" ]; then
+              echo "--- $f"
+              if command -v sha256sum >/dev/null 2>&1; then
+                sha256sum "$f" || true
+              else
+                shasum -a 256 "$f" || true
+              fi
+              if git cat-file -e HEAD:"$f" 2>/dev/null; then
+                git show HEAD:"$f" | sha256sum || git show HEAD:"$f" | shasum -a 256 || true
+              else
+                echo "(no HEAD version)"
+              fi
+            else
+              echo "--- $f (missing)"
+            fi
+          done
+
       - name: Auto-commit updated datasets
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
