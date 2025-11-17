@@ -131,6 +131,15 @@ main {
   border-radius: inherit;
 }
 
+/* 视频占位与图片同样的填充方式 */
+.hero-placeholder video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: inherit;
+}
+
 .hero-card {
   padding: 20px;
   background: var(--bg-panel);
