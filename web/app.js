@@ -644,7 +644,8 @@ function renderFearChart(snapshot) {
             grid: { color: 'rgba(255,255,255,0.04)' },
           },
         },
-        plugins: { legend: { labels: { color: '#fff' } } },
+        // 单数据集折线图无需图例，隐藏以减少视觉噪音
+        plugins: { legend: { display: false } },
         elements: { line: { borderWidth: 2 } },
       },
     });
