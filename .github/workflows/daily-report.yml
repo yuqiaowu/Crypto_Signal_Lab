@@ -45,6 +45,22 @@ jobs:
           python 获取数据.py
           python fetch_onchain_and_news.py
 
+      - name: Debug snapshot & git status
+        if: always()
+        run: |
+          echo "== List repo root =="
+          ls -lah
+          echo "== Check snapshot exists =="
+          if [ -f global_onchain_news_snapshot.json ]; then
+            echo "snapshot: present"
+            wc -c global_onchain_news_snapshot.json || true
+            head -n 5 global_onchain_news_snapshot.json || true
+          else
+            echo "snapshot: MISSING"
+          fi
+          echo "== Git status =="
+          git status -sb || true
+
       - name: Upload datasets artifacts
         uses: actions/upload-artifact@v4
         with:
