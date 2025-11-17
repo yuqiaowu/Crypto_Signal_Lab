@@ -1,4 +1,4 @@
-name: Daily DeepSeek Report
+name: Daily AI Report
 
 on:
   schedule:
