@@ -50,47 +50,22 @@
 
       
 
-      <section id="charts-overview" class="panel">
-        <div class="panel__header">
-          <h2>图表总览</h2>
-          <p>将顶部三张火柴线与三张指标图整合在一个板块。</p>
-        </div>
+      <section id="charts-overview">
+        <!-- 第一行：火柴线 + 多空爆仓对比 -->
         <div class="charts charts--stack">
           <article class="chart-card">
             <header>
               <h3>ATR% 火柴线</h3>
-              <p>最近60天波动率趋势</p>
+              <p id="sparkAtrPanelSubtitle">最近60天波动率趋势</p>
             </header>
             <canvas id="sparkAtrPanel" height="64"></canvas>
           </article>
           <article class="chart-card">
             <header>
-              <h3>ATR 区间火柴线</h3>
-              <p>最近180天范围趋势</p>
-            </header>
-            <canvas id="sparkAtrRangePanel" height="64"></canvas>
-          </article>
-          <article class="chart-card">
-            <header>
-              <h3>Open Interest 火柴线</h3>
-              <p>最近60天持仓变化</p>
+              <h3>合约杠杆趋势</h3>
+              <p id="sparkOiPanelSubtitle">最近60天持仓变化</p>
             </header>
             <canvas id="sparkOiPanel" height="64"></canvas>
-          </article>
-
-          <article class="chart-card">
-            <header>
-              <h3>ATR% 波动率</h3>
-              <p>结合价格与 ATR% 判断波动区间</p>
-            </header>
-            <canvas id="atrChart" height="240"></canvas>
-          </article>
-          <article class="chart-card">
-            <header>
-              <h3>Open Interest 与成交量</h3>
-              <p>永续持仓与成交量同向变动提示杠杆变化</p>
-            </header>
-            <canvas id="oiChart" height="240"></canvas>
           </article>
           <article class="chart-card">
             <header>
@@ -98,6 +73,24 @@
               <p>按美元计价的长短向爆仓规模</p>
             </header>
             <canvas id="liqChart" height="240"></canvas>
+          </article>
+        </div>
+
+        <!-- 第二行：并列放大的两张图（ATR% 与 OI） -->
+        <div class="charts charts--two-up">
+          <article class="chart-card">
+            <header>
+              <h3>ATR% 波动率</h3>
+              <p>结合价格与 ATR% 判断波动区间</p>
+            </header>
+            <canvas id="atrChart" height="300"></canvas>
+          </article>
+          <article class="chart-card">
+            <header>
+  <h3>杠杆变化与成交量</h3>
+              <p>永续持仓与成交量同向变动提示杠杆变化</p>
+            </header>
+            <canvas id="oiChart" height="300"></canvas>
           </article>
         </div>
       </section>

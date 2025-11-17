@@ -277,6 +277,30 @@ function renderPanelSparklines(atrData, oiData) {
         data: { datasets: [{ data: series.map((d) => ({ x: d.date, y: d.atr_pct })), borderColor: '#7c5dff', tension: 0.25, pointRadius: 0, fill: false }] },
         options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { type: 'time', display: false }, y: { display: false } } },
       });
+
+      // 更新 ATR% 火柴线：区间与相对前日变化（两行）
+      try {
+        const headerEl = sparkAtrPanel.previousElementSibling;
+        const subtitleEl = document.getElementById('sparkAtrPanelSubtitle') || (headerEl && headerEl.tagName === 'HEADER' ? headerEl.querySelector('p') : null);
+        if (series.length >= 2) {
+          const vals = series.map((d) => d.atr_pct).filter((v) => typeof v === 'number');
+          const minVal = Math.min(...vals);
+          const maxVal = Math.max(...vals);
+          const latest = vals[vals.length - 1];
+          const prev = vals[vals.length - 2];
+          const diff = latest - prev;
+          const diffAbs = Math.abs(diff);
+          const signText = diff >= 0 ? '上升' : '下降';
+          const rangeText = `最近60天波动范围：${percentFormatter.format(minVal)}% — ${percentFormatter.format(maxVal)}%`;
+          const changeText = `较前一日${signText} ${percentFormatter.format(diffAbs)} 个百分点`;
+          if (subtitleEl) subtitleEl.innerHTML = `${rangeText}<br>${changeText}`;
+          // 合并标题：显示最新 ATR%
+          const titleEl = headerEl?.querySelector('h3');
+          if (titleEl) titleEl.textContent = `最新 ATR%：${percentFormatter.format(latest)}%`;
+        }
+      } catch (e) {
+        console.warn('更新 ATR% 火柴线说明文字失败', e);
+      }
     }
 
     if (sparkAtrRangePanel && atrData?.series) {
@@ -290,6 +314,25 @@ function renderPanelSparklines(atrData, oiData) {
         data: { datasets: [{ data: series.map((d) => ({ x: d.date, y: d.atr_pct })), borderColor: '#4ad5ff', tension: 0.25, pointRadius: 0, fill: false }] },
         options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { type: 'time', display: false }, y: { display: false } } },
       });
+
+      // 更新 ATR 区间火柴线：最近180天范围与当前值（两行）
+      try {
+        const headerEl = sparkAtrRangePanel.previousElementSibling;
+        const subtitleEl = document.getElementById('sparkAtrRangePanelSubtitle') || (headerEl && headerEl.tagName === 'HEADER' ? headerEl.querySelector('p') : null);
+        if (series.length >= 1) {
+          const vals = series.map((d) => d.atr_pct).filter((v) => typeof v === 'number');
+          const minVal = Math.min(...vals);
+          const maxVal = Math.max(...vals);
+          const latest = vals[vals.length - 1];
+          const rangeText = `最近180天波动范围：${percentFormatter.format(minVal)}% — ${percentFormatter.format(maxVal)}%`;
+          if (subtitleEl) subtitleEl.textContent = rangeText;
+          // 合并标题：显示最新 ATR%
+          const titleEl = headerEl?.querySelector('h3');
+          if (titleEl) titleEl.textContent = `最新 ATR%：${percentFormatter.format(latest)}%`;
+        }
+      } catch (e) {
+        console.warn('更新 ATR 区间火柴线说明文字失败', e);
+      }
     }
 
     if (sparkOiPanel && Array.isArray(oiData)) {
@@ -303,6 +346,32 @@ function renderPanelSparklines(atrData, oiData) {
         data: { datasets: [{ data: series.map((d) => ({ x: d.date, y: d.open_interest_usd / 1e9 })), borderColor: '#ffffff', tension: 0.25, pointRadius: 0, fill: false }] },
         options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { type: 'time', display: false }, y: { display: false } } },
       });
+
+      // 更新说明文字：最近60天区间与相对前一日的变化
+      try {
+        // 更稳健的选择方式：canvas 的前一个兄弟节点就是 header
+        const headerEl = sparkOiPanel.previousElementSibling;
+        const subtitleEl = document.getElementById('sparkOiPanelSubtitle') || (headerEl && headerEl.tagName === 'HEADER' ? headerEl.querySelector('p') : sparkOiPanel.closest('.chart-card')?.querySelector('header p'));
+        if (subtitleEl && series.length >= 2) {
+          const minVal = Math.min(...series.map((d) => d.open_interest_usd));
+          const maxVal = Math.max(...series.map((d) => d.open_interest_usd));
+          const latest = series[series.length - 1].open_interest_usd;
+          const prev = series[series.length - 2].open_interest_usd;
+          const diff = latest - prev;
+          const diffAbs = Math.abs(diff);
+          const diffPct = prev ? (diff / prev) * 100 : 0;
+          const isUp = diff >= 0;
+
+          const changeText = `较前一日${isUp ? '增加' : '减少'} ${currencyCompact.format(diffAbs)} (${percentFormatter.format(Math.abs(diffPct))}%)`;
+          const rangeText = `最近60天持仓区间：${currencyCompact.format(minVal)} — ${currencyCompact.format(maxVal)}`;
+          subtitleEl.innerHTML = `${rangeText}<br>${changeText}`;
+          // 合并标题：显示最新合约杠杆（OI）
+          const titleEl = headerEl?.querySelector('h3');
+          if (titleEl) titleEl.textContent = `最新杠杆（OI）：${currencyCompact.format(latest)}`;
+        }
+      } catch (e) {
+        console.warn('更新 OI 火柴线说明文字失败', e);
+      }
     }
   } catch (err) {
     console.error('渲染图表总览火柴线失败', err);

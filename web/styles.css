@@ -239,6 +239,17 @@ code {
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
+/* 第二行两列布局，卡片更宽以便放大图 */
+.charts--two-up {
+  grid-template-columns: repeat(2, minmax(380px, 1fr));
+  gap: 24px;
+}
+
+/* 图表区块行间距：两行网格之间留出空间，提升层次感 */
+#charts-overview .charts + .charts {
+  margin-top: 28px;
+}
+
 /* 让视觉快照区域强制单列（高优先级覆盖） */
 .charts.charts--visuals {
   grid-template-columns: 1fr;
@@ -257,6 +268,11 @@ code {
 
 .chart-card h3 {
   margin: 0;
+}
+
+/* 所有数据面板的副标题 60% 透明度 */
+.chart-card header p {
+  opacity: 0.6;
 }
 
 .sparkline {
