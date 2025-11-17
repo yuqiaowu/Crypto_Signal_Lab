@@ -82,6 +82,8 @@ jobs:
             eth_open_interest_history.json
             eth_liquidations_daily.json
             eth_okx_daily.png
+            model_analysis.md
+            model_email_body.md
 
       - name: Send email
         if: always()
