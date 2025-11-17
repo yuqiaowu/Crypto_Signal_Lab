@@ -114,7 +114,6 @@ jobs:
           subject: "ETH 每日报告"
           from: "${{ secrets.MAIL_FROM }}"
           to: "${{ secrets.MAIL_TO }}"
-          content_type: text/html
           convert_markdown: true
           html_body: file://model_email_body.md
           attachments: |
