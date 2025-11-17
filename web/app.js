@@ -32,6 +32,16 @@ const percentFormatter = new Intl.NumberFormat('en-US', {
 const signalsFallbackEl = document.getElementById('signalsFallback');
 const signalHighlightsEl = document.getElementById('signalHighlights');
 
+function buildCacheBustedUrl(path) {
+  try {
+    const url = new URL(path, window.location.href);
+    url.searchParams.set('_ts', Date.now().toString());
+    return url.toString();
+  } catch (_) {
+    return path;
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const yearEl = document.getElementById('year');
   if (yearEl) {
@@ -97,7 +107,7 @@ async function loadData() {
 }
 
 async function fetchJSON(path) {
-  const response = await fetch(path);
+  const response = await fetch(buildCacheBustedUrl(path), { cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`无法读取 ${path}`);
   }
@@ -149,7 +159,7 @@ function stripHeadingBrackets(text) {
 async function loadMarkdown(path, target, isLongForm = false) {
   if (!target) return;
   try {
-    const response = await fetch(path);
+    const response = await fetch(buildCacheBustedUrl(path), { cache: 'no-store' });
     if (!response.ok) {
       throw new Error('获取 Markdown 失败');
     }
