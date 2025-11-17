@@ -8,7 +8,6 @@ __pycache__/
 *.pyd
 
 # Generated datasets and reports
-global_onchain_news_snapshot.json
 deepseek_analysis.md
 deepseek_email_body.md
 
