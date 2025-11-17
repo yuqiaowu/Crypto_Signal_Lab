@@ -513,31 +513,8 @@ def call_gemini(
 
 
 def save_report(payload: Dict[str, Any], analysis_text: str, path: Path, model_label: str) -> None:
+    # 仅输出模型回复，不包含提示词或输入数据集
     with path.open("w", encoding="utf-8") as f:
-        f.write(f"# {model_label} 分析报告\n\n")
-        f.write("## 提示内容\n\n")
-        f.write(payload["instructions"] + "\n\n")
-        f.write("## 最近60天信号数据 (JSON)\n\n")
-        f.write("```json\n" + json.dumps(payload["recent_data"], ensure_ascii=False, indent=2) + "\n```\n\n")
-        if payload.get("onchain_paragraphs"):
-            f.write("## 链上数据摘要\n\n")
-            ocp = payload["onchain_paragraphs"]
-            if ocp.get("stable"):
-                f.write("- 稳定币：" + str(ocp["stable"]) + "\n")
-            if ocp.get("bridge"):
-                f.write("- 桥接：" + str(ocp["bridge"]) + "\n")
-            if ocp.get("fear"):
-                f.write("- 恐慌指数：" + str(ocp["fear"]) + "\n")
-            if ocp.get("gas"):
-                f.write("- Gas/Mempool：" + str(ocp["gas"]) + "\n")
-            if ocp.get("news"):
-                f.write("- 新闻要点：" + str(ocp["news"]) + "\n")
-        if payload.get("extra_blocks"):
-            f.write("\n## 链上快照 (JSON)\n\n")
-            onchain_json = next((b for b in payload["extra_blocks"] if str(b).startswith("链上快照（JSON）：")), None)
-            if onchain_json:
-                content = str(onchain_json).split("链上快照（JSON）：", 1)[1]
-                f.write("```json\n" + content + "\n```\n\n")
         f.write(f"## {model_label} 回复\n\n")
         f.write(analysis_text or "(无回复)")
         ts = datetime.now(timezone.utc).isoformat()

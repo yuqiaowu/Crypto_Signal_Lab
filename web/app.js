@@ -116,28 +116,21 @@ async function fetchJSON(path) {
 
 function extractGeminiReply(text) {
   try {
-    // 优先从“### 1. 市场概述”开始（兼容是否带《》）
-    const sectionStartRegex = /^###\s*1\.\s*(?:《)?市场概述(?:》)?/m;
+    // 优先从“市场概述”章节开始，兼容 H2/H3、是否带编号与《》
+    const sectionStartRegex = /^(?:##|###)\s*(?:\d+\.)?\s*(?:《)?市场概述(?:》)?/m;
     const sectionMatch = text.match(sectionStartRegex);
     if (sectionMatch) {
       const idx = text.indexOf(sectionMatch[0]);
       return text.slice(idx).trim();
     }
 
-    // 次选：存在“## Gemini 回复”时，跳过该标题及其后的前言，直接从下一个三级标题开始
+    // 次选：存在“## Gemini 回复”时，直接取其后的所有内容（不再依赖下一个 H3）
     const headerRegex = /^##\s*Gemini\s*回复\s*$/m;
     const headerMatch = text.match(headerRegex);
     if (headerMatch) {
       const headerIdx = text.indexOf(headerMatch[0]);
       const afterHeader = text.slice(headerIdx + headerMatch[0].length);
-      const nextH3Regex = /^###\s+/m;
-      const nextH3Match = afterHeader.match(nextH3Regex);
-      if (nextH3Match) {
-        const nextIdx = afterHeader.indexOf(nextH3Match[0]);
-        return afterHeader.slice(nextIdx).trim();
-      }
-      // 如果没有后续三级标题，至少移除“Gemini 回复”行
-      return text.replace(headerRegex, '').trim();
+      return afterHeader.trim();
     }
 
     // 找不到标记则原样返回
