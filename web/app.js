@@ -600,9 +600,9 @@ function renderFearChart(snapshot) {
     const points = [...series]
       .map((d) => ({
         x: new Date(Number(d.timestamp) * 1000),
-        y: typeof d.value === 'number' ? d.value : null,
+        y: Number(d.value),
       }))
-      .filter((p) => p.y !== null)
+      .filter((p) => Number.isFinite(p.y))
       .sort((a, b) => a.x - b.x);
 
     charts.fear = new Chart(ctx, {
