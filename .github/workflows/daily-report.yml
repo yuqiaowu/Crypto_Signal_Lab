@@ -67,12 +67,26 @@ jobs:
 
       - name: Stamp workflow run time
         run: |
+          set -e
           ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          rand_hex=""
+          if command -v openssl >/dev/null 2>&1; then
+            rand_hex=$(openssl rand -hex 16 || true)
+          fi
+          if [ -z "$rand_hex" ]; then
+            rand_hex=$(python - <<'PY'
+import secrets
+print(secrets.token_hex(16))
+PY
+)
+          fi
           {
             echo "timestamp_utc=${ts}"
+            echo "github_sha=${{ github.sha }}"
             echo "github_run_id=${{ github.run_id }}"
             echo "github_run_number=${{ github.run_number }}"
             echo "github_run_attempt=${{ github.run_attempt }}"
+            echo "random_hex=${rand_hex}"
           } > latest_run.txt
           cat latest_run.txt
 
