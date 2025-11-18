@@ -543,11 +543,67 @@ def save_email_body(analysis_text: str, path: Path) -> None:
         f.write("\n\n---\nGenerated at: " + ts + " (UTC)\n")
 
 
+def build_offline_text(payload: Dict[str, Any]) -> str:
+    """当外部模型不可用时，基于本地/缓存数据生成保守版日报文本。
+    内容遵循既有的 Markdown 结构，确保前端可正常渲染。
+    """
+    extras = payload.get("extra_blocks", []) or []
+    oc_paras = payload.get("onchain_paragraphs", {}) or {}
+    latest_summary = None
+    # 从 extra_blocks 中提取“最新交易日摘要：”与“最新均线相对位置：”信息
+    for blk in extras:
+        s = str(blk)
+        if s.startswith("最新交易日摘要："):
+            latest_summary = s.replace("最新交易日摘要：", "").strip()
+    latest_relation_json = payload.get("latest_ma_relation")
+    latest_relation_str = (
+        "最新均线相对位置：" + json.dumps(latest_relation_json, ensure_ascii=False)
+        if isinstance(latest_relation_json, dict)
+        else None
+    )
+
+    # 组装各章节文本（尽量引用可用段落）
+    parts: List[str] = []
+    # 市场概述
+    parts.append("## 市场概述")
+    if latest_summary:
+        parts.append(f"- {latest_summary}")
+    if latest_relation_str:
+        parts.append(f"- {latest_relation_str}")
+    parts.append("- 模型服务当前不可用，以下为基于缓存数据的保守版摘要。")
+
+    # 链上与情绪
+    parts.append("\n## 链上与情绪")
+    if oc_paras.get("fear"):
+        parts.append(f"- 恐慌指数：{oc_paras.get('fear')}")
+    if oc_paras.get("gas"):
+        parts.append(f"- Gas/Mempool：{oc_paras.get('gas')}")
+    if oc_paras.get("stable"):
+        parts.append(f"- 稳定币：{oc_paras.get('stable')}")
+    if oc_paras.get("bridge"):
+        parts.append(f"- 跨链桥接：{oc_paras.get('bridge')}")
+    if oc_paras.get("derivatives"):
+        parts.append(f"- 衍生品：{oc_paras.get('derivatives')}")
+    if not any([oc_paras.get("fear"), oc_paras.get("gas"), oc_paras.get("stable"), oc_paras.get("bridge"), oc_paras.get("derivatives")]):
+        parts.append("- 链上与情绪数据未能获取，使用历史快照。")
+
+    # 操作建议（保守版）
+    parts.append("\n## 操作建议")
+    parts.append("- 保持审慎：在模型不可用与数据未全面更新时，建议降低仓位波动，观察 1-2 周，等待量能与关键均线的明确信号。")
+    parts.append("- 若出现放量企稳并连续站上关键均线（如 MA20/MA60），可逐步试探性加仓；若继续跌破并放量下行，宜减仓或观望。")
+
+    # 风险与关注
+    parts.append("\n## 风险与关注")
+    parts.append("- 数据与模型服务的不确定性：外部 API 超时或不可用可能影响结论的充分性，请结合实时盘面独立判断。")
+    parts.append("- 密切关注恐慌指数与成交量配合，如极端恐慌伴随缩量，常见短期反弹；若恐慌伴随放量下行，需谨慎防守。")
+
+    return "\n".join(parts)
+
+
 def main() -> None:
     deepseek_key = os.environ.get("DEEPSEEK_API_KEY")
     gemini_key = os.environ.get("GEMINI_API_KEY")
-    if not deepseek_key and not gemini_key:
-        raise SystemExit("未设置 DEEPSEEK_API_KEY 或 GEMINI_API_KEY，无法生成分析。")
+    # 若均未配置模型 Key，不再直接退出；改用离线回退生成
 
     proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
     if proxy is not None:
@@ -588,15 +644,19 @@ def main() -> None:
         except Exception as exc:
             print(f"Gemini 调用失败：{exc}")
 
-    if analysis_text is None:
-        if not deepseek_key:
-            raise SystemExit("Gemini 调用失败且未配置 DeepSeek API Key。")
+    if analysis_text is None and deepseek_key:
         try:
             analysis_text = call_deepseek(api_key=deepseek_key, proxy=proxy, payload=payload)
             model_label = "DeepSeek"
             print("使用 DeepSeek 生成分析。")
         except Exception as exc:
-            raise SystemExit(f"DeepSeek 调用失败：{exc}") from exc
+            print(f"DeepSeek 调用失败：{exc}")
+
+    # 离线回退：若所有模型不可用或均失败，则基于本地/缓存数据生成保守版文本
+    if analysis_text is None:
+        print("所有模型不可用或调用失败，使用离线回退生成保守版日报。")
+        analysis_text = build_offline_text(payload)
+        model_label = "Offline"
 
     save_report(payload, analysis_text, Path("model_analysis.md"), model_label or "模型")
     print("分析结果已写入 model_analysis.md")
