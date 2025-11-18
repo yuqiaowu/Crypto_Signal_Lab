@@ -45,6 +45,15 @@ jobs:
           python 获取数据.py
           python fetch_onchain_and_news.py
 
+      - name: Stamp workflow run time
+        run: |
+          {
+            echo "timestamp_utc=$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            echo "github_run_id=${{ github.run_id }}"
+            echo "github_run_number=${{ github.run_number }}"
+            echo "github_run_attempt=${{ github.run_attempt }}"
+          } > latest_run.txt
+
       - name: Debug snapshot & git status
         if: always()
         run: |
@@ -134,6 +143,7 @@ jobs:
             model_analysis.md
             model_email_body.md
             global_onchain_news_snapshot.json
+            latest_run.txt
 
       - name: Send email
         if: always()
