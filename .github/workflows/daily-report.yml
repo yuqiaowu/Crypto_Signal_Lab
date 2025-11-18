@@ -169,16 +169,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: update datasets (ATR 360d, daily refresh)"
-          file_pattern: |
-            signals_60d.json
-            atr_metrics.json
-            eth_open_interest_history.json
-            eth_liquidations_daily.json
-            eth_okx_daily.png
-            model_analysis.md
-            model_email_body.md
-            global_onchain_news_snapshot.json
-            latest_run.txt
+          # 移除文件白名单，直接提交仓库中的所有变更，避免匹配问题导致“Working tree clean”
 
       - name: Print files in last commit
         if: steps.auto_commit.outputs.changes_detected == 'true'
