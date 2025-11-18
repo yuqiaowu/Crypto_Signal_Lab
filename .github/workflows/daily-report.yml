@@ -47,12 +47,14 @@ jobs:
 
       - name: Stamp workflow run time
         run: |
+          ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           {
-            echo "timestamp_utc=$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            echo "timestamp_utc=${ts}"
             echo "github_run_id=${{ github.run_id }}"
             echo "github_run_number=${{ github.run_number }}"
             echo "github_run_attempt=${{ github.run_attempt }}"
           } > latest_run.txt
+          cat latest_run.txt
 
       - name: Debug snapshot & git status
         if: always()
@@ -112,7 +114,8 @@ jobs:
             eth_okx_daily.png \
             model_analysis.md \
             model_email_body.md \
-            global_onchain_news_snapshot.json; do
+            global_onchain_news_snapshot.json \
+            latest_run.txt; do
             if [ -f "$f" ]; then
               echo "--- $f"
               if command -v sha256sum >/dev/null 2>&1; then
