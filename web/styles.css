@@ -27,6 +27,52 @@ body {
   line-height: 1.6;
 }
 
+/* 站点头部导航（深色） */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: rgba(14, 17, 26, 0.85);
+  backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+.site-header__inner {
+  width: min(1200px, 90vw);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+}
+
+.site-header__brand {
+  text-decoration: none;
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.site-header__links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.site-header__links a {
+  text-decoration: none;
+  color: var(--muted);
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+.site-header__links a:hover {
+  color: #fff;
+  border-color: var(--border);
+}
+
 img {
   max-width: 100%;
   display: block;
