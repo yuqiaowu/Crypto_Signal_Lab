@@ -228,7 +228,7 @@ main {
 .panel__header h2 {
   margin: 0 0 8px;
   color: var(--primary);
-  font-size: 1.35rem;
+  font-size: 0.8rem;
 }
 
 .panel__header p {
@@ -356,14 +356,18 @@ code {
   transition: max-height 0.3s ease;
 }
 
+.markdown h1,
 .markdown h2 {
   color: rgba(255, 255, 255, 0.85);
-  font-size: 1.35rem;
+  font-size: clamp(1.15rem, 2vw, 1.4rem);
+  margin: 1.5em 0 0.6em;
 }
 
 .markdown h3,
 .markdown h4 {
   color: #fff;
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  margin: 1.2em 0 0.5em;
 }
 
 .markdown pre {
