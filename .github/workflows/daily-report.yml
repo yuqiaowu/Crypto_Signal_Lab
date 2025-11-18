@@ -163,6 +163,28 @@ jobs:
             fi
           done
 
+      - name: Pre-stage changed files for commit
+        if: always()
+        run: |
+          set -e
+          echo "== Pre-stage selected files =="
+          for f in \
+            signals_60d.json \
+            atr_metrics.json \
+            eth_open_interest_history.json \
+            eth_liquidations_daily.json \
+            eth_okx_daily.png \
+            model_analysis.md \
+            model_email_body.md \
+            global_onchain_news_snapshot.json \
+            latest_run.txt; do
+            if [ -f "$f" ]; then
+              git add "$f" || true
+            fi
+          done
+          echo "== Staged status =="
+          git status -sb || true
+
       - name: Auto-commit updated datasets
         if: always()
         id: auto_commit
