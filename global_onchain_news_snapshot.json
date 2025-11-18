@@ -1,5 +1,5 @@
 {
-  "generated_at": "2025-11-18T07:51:58.211842+00:00",
+  "generated_at": "2025-11-18T07:55:19.901214+00:00",
   "defillama": {
     "ethereum": {
       "chain": "Ethereum",
@@ -78205,10 +78205,10 @@
           "transactions_24h": 0,
           "difficulty": 0,
           "volume_24h_approximate": "0",
-          "mempool_transactions": 5415,
+          "mempool_transactions": 5292,
           "mempool_median_gas_price": 50080000,
-          "mempool_tps": 8,
-          "mempool_total_value_approximate": "104478268758565800000",
+          "mempool_tps": 8.016666666666667,
+          "mempool_total_value_approximate": "34199440734598745000",
           "best_block_height": 22650678,
           "best_block_hash": "05368da559e288bf4f992afad40c10db01b6f76b080c82f72d4a14aad3aaa0db",
           "best_block_time": "2025-06-07 05:40:11",
@@ -78277,9 +78277,9 @@
           "cache": {
             "live": false,
             "duration": "Ignore",
-            "since": "2025-11-18 07:52:03",
-            "until": "2025-11-18 07:53:14",
-            "time": 4.0531158447265625e-06
+            "since": "2025-11-18 07:55:32",
+            "until": "2025-11-18 07:56:43",
+            "time": 3.0994415283203125e-06
           },
           "api": {
             "version": "2.0.95-ie",
@@ -78289,9 +78289,9 @@
             "notice": "Try out our new API v.3: https://3xpl.com/data"
           },
           "servers": "API4,ETH3,ETH3",
-          "time": 1.4303090572357178,
-          "render_time": 0.002079010009765625,
-          "full_time": 0.0020830631256103516,
+          "time": 1.7354028224945068,
+          "render_time": 0.0016989707946777344,
+          "full_time": 0.0017020702362060547,
           "request_cost": 1
         }
       },
@@ -78301,7 +78301,7 @@
       },
       "suggested_fee_rate": "0",
       "mempool_summary": {
-        "transactions": 5415
+        "transactions": 5292
       },
       "notes": [
         "Blockchair /ethereum/mempool endpoint currently 404; stats-based summary provided instead."
@@ -78319,34 +78319,34 @@
           "transactions_24h": 342896,
           "difficulty": 152271405447600,
           "volume_24h": 117719249886973,
-          "mempool_transactions": 1870,
-          "mempool_size": 1148887,
-          "mempool_tps": 2.566666666666667,
-          "mempool_total_fee_usd": 1622.564,
+          "mempool_transactions": 2474,
+          "mempool_size": 1516752,
+          "mempool_tps": 2.6666666666666665,
+          "mempool_total_fee_usd": 2318.093,
           "best_block_height": 924127,
           "best_block_hash": "000000000000000000014e55bd733f3b99eced6b6146f633fe75edb42365a273",
           "best_block_time": "2025-11-18 07:42:56",
           "blockchain_size": 700694613926,
           "average_transaction_fee_24h": 1352,
           "inflation_24h": 38437500000,
-          "median_transaction_fee_24h": 619,
+          "median_transaction_fee_24h": 580,
           "cdd_24h": 36918929.14063543,
-          "mempool_outputs": 9167,
+          "mempool_outputs": 12638,
           "largest_transaction_24h": {
             "hash": "1d547d4a779b9e969eaef962f0694fd68ab685d6ded188b9e9c9a52a918029d1",
             "value_usd": 2659777024
           },
-          "nodes": 9610,
+          "nodes": 9994,
           "hashrate_24h": "931624938053273848560",
           "inflation_usd_24h": 34746346.875,
           "average_transaction_fee_usd_24h": 1.2224832637542287,
-          "median_transaction_fee_usd_24h": 0.560009415,
+          "median_transaction_fee_usd_24h": 0.5243026000000001,
           "market_price_usd": 90397,
           "market_price_btc": 1,
           "market_price_usd_change_24h_percentage": -5.5762,
           "market_cap_usd": 1802974920560,
           "market_dominance_percentage": 54.14,
-          "next_retarget_time_estimate": "2025-11-26 18:28:53",
+          "next_retarget_time_estimate": "2025-11-26 18:32:22",
           "next_difficulty_estimate": 156013335641110,
           "countdowns": [],
           "suggested_transaction_fee_per_byte_sat": 2,
@@ -78356,13 +78356,13 @@
           "code": 200,
           "source": "A",
           "state": 924127,
-          "market_price_usd": 90316,
+          "market_price_usd": 90397,
           "cache": {
             "live": false,
             "duration": "Ignore",
-            "since": "2025-11-18 07:52:02",
-            "until": "2025-11-18 07:53:13",
-            "time": 4.0531158447265625e-06
+            "since": "2025-11-18 07:55:31",
+            "until": "2025-11-18 07:56:42",
+            "time": 3.0994415283203125e-06
           },
           "api": {
             "version": "2.0.95-ie",
@@ -78372,17 +78372,17 @@
             "notice": "Try out our new API v.3: https://3xpl.com/data"
           },
           "servers": "API4,BTC5",
-          "time": 0.45134997367858887,
-          "render_time": 0.0020308494567871094,
-          "full_time": 0.002034902572631836,
+          "time": 0.7246489524841309,
+          "render_time": 0.0012347698211669922,
+          "full_time": 0.0012378692626953125,
           "request_cost": 1
         }
       },
       "gas_snapshot": null,
       "suggested_fee_rate": 2,
       "mempool_summary": {
-        "transactions": 1870,
-        "size_bytes": 1148887
+        "transactions": 2474,
+        "size_bytes": 1516752
       },
       "notes": [
         "Blockchair /bitcoin/mempool endpoint currently 404; stats-based summary provided instead."
@@ -78391,65 +78391,85 @@
   },
   "btc_mempool": {
     "overview": {
-      "count": 41040,
-      "vsize": 31691178,
-      "total_fee": 6586556,
+      "count": 41914,
+      "vsize": 32154574,
+      "total_fee": 7385001,
       "fee_histogram": [
         [
-          5.0247526,
+          5.799534,
+          50236
+        ],
+        [
+          4.1928573,
+          50107
+        ],
+        [
+          3.3418367,
           50100
         ],
         [
-          3.9285715,
-          50204
+          3.24739,
+          53371
         ],
         [
-          3.194651,
-          50805
+          3.0217392,
+          50109
         ],
         [
-          3.0,
-          52028
+          2.9951923,
+          50147
         ],
         [
-          2.0819113,
-          50273
+          2.2333333,
+          50254
+        ],
+        [
+          2.017857,
+          50530
         ],
         [
           2.0069053,
-          62796
+          55043
         ],
         [
-          1.3023256,
-          50114
+          2.0033302,
+          51170
         ],
         [
-          1.0896552,
-          50242
+          1.2063106,
+          50209
+        ],
+        [
+          1.064257,
+          54621
         ],
         [
           1.0071429,
-          54650
+          50305
         ],
         [
           1.0047393,
-          51902
+          57112
         ],
         [
-          0.21985815,
-          55380
+          0.2589928,
+          52113
         ],
         [
-          0.21582733,
-          60106
+          0.2173913,
+          87009
+        ],
+        [
+          0.21256039,
+          76546
         ],
         [
           0.21171351,
-          240063
+          300193
         ],
         [
           0.21171139,
-          899739
+          999710
         ],
         [
           0.21170928,
@@ -78645,11 +78665,11 @@
         ],
         [
           0.20476191,
-          85772
+          88877
         ],
         [
           0.20042367,
-          80647
+          80854
         ],
         [
           0.20042074,
@@ -79049,7 +79069,7 @@
         ],
         [
           0.11678832,
-          91790
+          91516
         ],
         [
           0.11289648,
@@ -79057,7 +79077,7 @@
         ],
         [
           0.112,
-          1838328
+          1838203
         ],
         [
           0.11024872,
@@ -79382,16 +79402,16 @@
       ]
     },
     "recommended_fees": {
-      "fastestFee": 2,
+      "fastestFee": 3,
       "halfHourFee": 1,
       "hourFee": 1,
       "economyFee": 1,
       "minimumFee": 1
     },
     "queue_metrics": {
-      "count": 41040,
-      "vsize": 31691178,
-      "total_fee": 6586556
+      "count": 41914,
+      "vsize": 32154574,
+      "total_fee": 7385001
     }
   },
   "eth_gas": {
@@ -79571,6 +79591,14 @@
     "cryptocompare": {
       "items": [
         {
+          "title": "Bitcoin Below $100K, Coinbase Slumps, Banks Strain — Not an AI Correction Anymore",
+          "link": "https://www.investing.com/analysis/bitcoin-below-100k-coinbase-slumps-banks-strain--not-an-ai-correction-anymore-200670155",
+          "published": "2025-11-18T07:52:30+00:00",
+          "source": "investing_comcryptoopinionandanalysis",
+          "tags": "BTC|EXCHANGE|CRYPTOCURRENCY",
+          "summary": ""
+        },
+        {
           "title": "Bitcoin Slides Below $90K as ETF Investors Face First Major Losses – More Dips Ahead?",
           "link": "https://cryptonews.com/news/bitcoin-slides-below-90k-as-etf-investors-face-first-major-losses-more-dips-ahead/",
           "published": "2025-11-18T07:49:30+00:00",
@@ -79595,12 +79623,28 @@
           "summary": ""
         },
         {
+          "title": "Bitcoin ETFs Record Outflows as Average Investors Enter Red; Solana Maintains Inflow Streak",
+          "link": "https://en.coinotag.com/bitcoin-etfs-record-outflows-as-average-investors-enter-red-solana-maintains-inflow-streak",
+          "published": "2025-11-18T07:47:37+00:00",
+          "source": "coinotag",
+          "tags": "BTC|BUSINESS|MARKET|SOL|CRYPTOCURRENCY",
+          "summary": "Bitcoin and Ether ETFs experienced significant outflows totaling over $437 million on Monday, driven by Bitcoin’s price drop below $89,600, pushing average investors into losses for the first time since launch. Meanwhile, Solana ETFs continued their inflow streak with $8.2 million added, highlighting divergent trends in the crypto ETF market. Bitcoin ETFs saw $254.6 million"
+        },
+        {
           "title": "🚨 Huang Licheng’s 25x ETH Long on Hyperliquid Valued at $5.32M with $3,024 Entry and $2,908 Liquidation Price",
           "link": "https://en.coinotag.com/breakingnews/huang-lichengs-25x-eth-long-on-hyperliquid-valued-at-5-32m-with-3024-entry-and-2908-liquidation-price",
           "published": "2025-11-18T07:45:16+00:00",
           "source": "coinotag",
           "tags": "ETH|TRADING|CRYPTOCURRENCY",
           "summary": "Huang Licheng’s 25x ETH Long on Hyperliquid Valued at $5.32M with $3,024 Entry and $2,908 Liquidation Price"
+        },
+        {
+          "title": "El Salvador Buys 1,090 Bitcoin Amid IMF Loan Compliance Questions",
+          "link": "https://en.coinotag.com/el-salvador-buys-1090-bitcoin-amid-imf-loan-compliance-questions",
+          "published": "2025-11-18T07:43:44+00:00",
+          "source": "coinotag",
+          "tags": "BTC|MARKET|TRADING|CRYPTOCURRENCY",
+          "summary": "El Salvador’s government recently purchased 1,090 Bitcoin for approximately $100 million amid a market dip below $90,000, boosting its total holdings to 7,474 BTC valued at around $670 million. This move aligns with the nation’s strategy of accumulating BTC during price declines, despite ongoing IMF restrictions. El Salvador adds 1,090 BTC to reserves: The purchase"
         },
         {
           "title": "Average Bitcoin ETF investor now underwater as BTC falls below $89.6K",
@@ -79785,30 +79829,6 @@
           "source": "investing_comcryptoopinionandanalysis",
           "tags": "ETH|CRYPTOCURRENCY",
           "summary": ""
-        },
-        {
-          "title": "Bitcoin Encounters a Hidden Wave of Selling From Overleveraged Treasury Firms",
-          "link": "https://www.investing.com/analysis/bitcoin-encounters-a-hidden-wave-of-selling-from-overleveraged-treasury-firms-200670325",
-          "published": "2025-11-18T06:56:42+00:00",
-          "source": "investing_comcryptoopinionandanalysis",
-          "tags": "BTC|REGULATION|DIGITAL ASSET TREASURY|MACROECONOMICS|CRYPTOCURRENCY",
-          "summary": ""
-        },
-        {
-          "title": "Quantum Resistance: How Bitcoin and Ethereum Forge Different Security Paths Against Looming Threats",
-          "link": "https://bitcoinworld.co.in/bitcoin-ethereum-quantum-resistance-paths/",
-          "published": "2025-11-18T06:55:10+00:00",
-          "source": "bitcoinworld",
-          "tags": "BLOCKCHAIN|BTC|ETH|RESEARCH|CRYPTOCURRENCY",
-          "summary": "BitcoinWorld Quantum Resistance: How Bitcoin and Ethereum Forge Different Security Paths Against Looming Threats Imagine waking up to news that quantum computers have broken blockchain encryption. This terrifying scenario drives Bitcoin and Ethereum’s urgent quest for quantum resistance. According to Tiger Research’s groundbreaking report, these leading cryptocurrencies are taking dramatically different approaches to secure their futures against quantum threats. What Exactly is Quantum Resistance and Why Does It Matter? Quantum resistance refers to cryptographic systems that can withstand attacks from quantum computers. These powerful machines could potentially break today’s encryption standards in minutes rather than centuries. The race for quantum resistance has become crucial as Q-Day—when quantum computers become capable of breaking current encryption—approaches within 5-7 years according to experts. Bitcoin’s Conservative Path to Quantum Security Bitcoin chooses to maintain its existing structure while integrating Post-Quantum Cryptography (PQC). This approach focuses on: Preserving the current blockchain architecture Implementing PQC for transaction signing Maintaining backward compatibility Securing communication channels This conservative strategy ensures minimal disruption while achieving essential quantum resistance protection. Ethereum’s Revolutionary Quantum Resistance Strategy Ethereum takes a more transformative approach by planning to redesign its entire account structure. Their quantum resistance strategy involves: Completely rebuilding account architecture Integrating PQC at the foundational level Creating new security protocols Future-proofing the entire ecosystem When Will Quantum Computers Threaten Blockchain? Tiger Research projects Q-Day arriving within 5-7 years, a timeline that aligns with BlackRock’s concerns mentioned in their spot BTC ETF application. Major tech companies like Google and AWS have already begun transitioning to PQC systems, highlighting the urgency of achieving quantum resistance. Key Challenges in Achieving True Quantum Resistance Both Bitcoin and Ethereum face significant hurdles in their quantum resistance journeys: Technical implementation complexity Network upgrade coordination Backward compatibility requirements Community consensus building Resource allocation and development timelines The Future of Quantum Resistance in Cryptocurrency As quantum computing advances, the importance of robust quantum resistance grows exponentially. Both Bitcoin and Ethereum’s approaches demonstrate the cryptocurrency industry’s proactive stance against emerging threats. Their different strategies reflect their unique philosophies and technical requirements while pursuing the same goal: long-term security through effective quantum resistance. Frequently Asked Questions What is quantum resistance in simple terms? Quantum resistance means creating encryption that even quantum computers cannot break, ensuring blockchain security remains intact as technology advances. Why are Bitcoin and Ethereum taking different approaches? Bitcoin prioritizes stability and minimal changes, while Ethereum embraces more fundamental architectural updates based on their different design philosophies. How soon do we need quantum resistance? Experts project we need quantum resistance within 5-7 years before quantum computers become powerful enough to break current encryption. Can quantum computers break Bitcoin today? No, current quantum computers lack the power to break Bitcoin’s encryption, but the threat is real for the near future. What happens if we don’t achieve quantum resistance in time? Without quantum resistance, quantum computers could potentially break blockchain security, compromising transactions and digital assets. Are other cryptocurrencies working on quantum resistance? Yes, most major cryptocurrencies are researching quantum resistance solutions, with some already implementing early versions. Found this quantum resistance analysis valuable? Share this crucial information with your network on social media to help others understand the security future of Bitcoin and Ethereum. Knowledge sharing strengthens our entire crypto community! To learn more about the latest cryptocurrency security trends, explore our article on key developments shaping blockchain technology future adoption. This post Quantum Resistance: How Bitcoin and Ethereum Forge Different Security Paths Against Looming Threats first appeared on BitcoinWorld ."
-        },
-        {
-          "title": "Monetary Policy Easing: Bitcoin’s Triumph Over Weak Altcoins Revealed",
-          "link": "https://bitcoinworld.co.in/monetary-policy-easing-bitcoin-altcoins/",
-          "published": "2025-11-18T06:45:11+00:00",
-          "source": "bitcoinworld",
-          "tags": "ALTCOIN|BTC|BUSINESS|MACROECONOMICS|CRYPTOCURRENCY",
-          "summary": "BitcoinWorld Monetary Policy Easing: Bitcoin’s Triumph Over Weak Altcoins Revealed Could monetary policy easing be the catalyst that propels Bitcoin to new heights while leaving weaker altcoins behind? CryptoQuant CEO Ki Young Ju’s latest analysis suggests exactly that scenario. As central banks consider interest rate cuts, the cryptocurrency market stands at a critical juncture where monetary policy easing could reshape investment flows dramatically. How Monetary Policy Easing Impacts Crypto Markets Ki Young Ju explains that accommodative monetary policy, particularly interest rate cuts, creates a powerful shift in investor psychology. When central banks implement monetary policy easing, they essentially make traditional savings less attractive. This drives investors toward riskier assets, including cryptocurrencies. The current environment of monetary policy easing discussions has already begun influencing market sentiment, though the full effects may take months to materialize. Why Bitcoin Benefits Most from Monetary Policy Changes Bitcoin stands to become the primary beneficiary of any monetary policy easing for several compelling reasons: Institutional preference – Large investors view Bitcoin as digital gold ETF accessibility – Traditional investors can easily access Bitcoin through regulated products Market maturity – Bitcoin has established itself as the crypto market leader Liquidity advantage – Higher trading volumes make Bitcoin more attractive during uncertain times This monetary policy easing environment could drive significant liquidity into Bitcoin ETFs as investors seek exposure to the cryptocurrency space through familiar investment vehicles. The Coming Altcoin Liquidity Crisis While Bitcoin thrives during monetary policy easing, many altcoins face serious challenges. Projects without strong fundamentals or clear utility will struggle to attract investment. The liquidity that monetary policy easing generates tends to flow toward established assets first, leaving smaller cryptocurrencies fighting for scraps. This creates a dangerous scenario where monetary policy easing actually harms weaker altcoins despite theoretically favorable conditions. What’s the Six-Month Outlook for Bitcoin? Despite current headwinds like slowing dollar liquidity and reduced BTC inflows, Ju remains optimistic about Bitcoin’s medium-term prospects. He doesn’t expect BTC inflows to stop or turn negative within the next six months. This suggests that even before full monetary policy easing takes effect, Bitcoin maintains enough fundamental strength to withstand temporary market pressures. The gradual approach to monetary policy easing gives investors time to position themselves accordingly. Strategic Moves During Monetary Policy Transitions Investors should consider several strategies as monetary policy easing approaches: Focus on quality – Prioritize cryptocurrencies with strong fundamentals Monitor ETF flows – Watch institutional money movement patterns Avoid weak narratives – Steer clear of projects without clear utility Dollar-cost average – Build positions gradually as monetary policy evolves The coming monetary policy easing cycle represents both opportunity and risk, depending on your portfolio composition. Conclusion: Navigating the Monetary Policy Shift The impending monetary policy easing presents a clear divergence in cryptocurrency performance. Bitcoin appears positioned to capture the majority of benefits from this macroeconomic shift, while many altcoins face potential liquidity droughts. Investors who understand this dynamic can position their portfolios to capitalize on Bitcoin’s strength while avoiding the pitfalls facing weaker cryptocurrencies. The next six months will test which projects have real staying power versus those that merely rode the previous bull market wave. Frequently Asked Questions What is monetary policy easing? Monetary policy easing refers to central bank actions like interest rate cuts that make borrowing cheaper and increase money supply, typically stimulating economic activity. How does monetary policy easing affect Bitcoin? Monetary policy easing makes risk assets more attractive since traditional savings yield less returns, potentially driving more investment into Bitcoin. Why would altcoins struggle during monetary policy easing? Weaker altcoins may struggle because investors prefer established assets like Bitcoin during uncertain times, creating a liquidity crunch for smaller projects. What time frame does CryptoQuant’s prediction cover? The analysis focuses on the next six months, during which Bitcoin inflows are expected to continue despite current challenges. Should investors sell all altcoins during monetary policy easing? Not necessarily – investors should differentiate between altcoins with strong fundamentals versus those with weak narratives or no real utility. How can I track the impact of monetary policy on crypto? Monitor Bitcoin ETF flows, central bank announcements, and liquidity indicators to gauge how monetary policy changes affect cryptocurrency markets. Found this analysis helpful? Share this article with fellow crypto enthusiasts on social media to help them navigate the coming monetary policy changes! To learn more about the latest Bitcoin trends, explore our article on key developments shaping Bitcoin price action. This post Monetary Policy Easing: Bitcoin’s Triumph Over Weak Altcoins Revealed first appeared on BitcoinWorld ."
         }
       ],
       "source": "CryptoCompare",
@@ -79828,7 +79848,7 @@
           "value": "11",
           "value_classification": "Extreme Fear",
           "timestamp": "1763424000",
-          "time_until_update": "58065"
+          "time_until_update": "57852"
         },
         {
           "value": "14",
@@ -79991,12 +80011,12 @@
   "blockchair_overview": {
     "circulation_eth": 122375301.62448,
     "burned_total_eth": 4591748.471729419,
-    "mempool_value_eth": 39.82058816858043,
+    "mempool_value_eth": 34.36014012091461,
     "market_price_usd": 3025.29,
     "market_price_usd_change_24h_percentage": -5.53466,
     "market_cap_usd": 364875134596.0,
-    "mempool_tps": 5.95,
-    "mempool_transactions": 5295,
+    "mempool_tps": 8.366666666666667,
+    "mempool_transactions": 5282,
     "suggested_fees_gwei": {
       "sloth": 0,
       "slow": 0,
@@ -81550,19 +81570,19 @@
       "ethereum": null,
       "bitcoin": {
         "recommended": {
-          "fastestFee": 2,
+          "fastestFee": 3,
           "halfHourFee": 1,
           "hourFee": 1,
           "economyFee": 1,
           "minimumFee": 1
         },
         "queue": {
-          "count": 41040,
-          "vsize": 31691178,
-          "total_fee": 6586556
+          "count": 41914,
+          "vsize": 32154574,
+          "total_fee": 7385001
         }
       },
-      "paragraph": "BTC 推荐费率: 最低 1 sat/vB, 经济 1 sat/vB, 正常 None sat/vB, 优先 None sat/vB；BTC Mempool 队列: 交易数 41040, 体积 31691178 vBytes, 累计费 6586556 sat；Blockchair 概览: ETH Mempool 价值 40 ETH, 24h 价格变动 -5.53%, 待处理交易 5295"
+      "paragraph": "BTC 推荐费率: 最低 1 sat/vB, 经济 1 sat/vB, 正常 None sat/vB, 优先 None sat/vB；BTC Mempool 队列: 交易数 41914, 体积 32154574 vBytes, 累计费 7385001 sat；Blockchair 概览: ETH Mempool 价值 34 ETH, 24h 价格变动 -5.53%, 待处理交易 5282"
     },
     "news": {
       "bitcoin": {
@@ -81706,6 +81726,14 @@
       "cryptocompare": {
         "items": [
           {
+            "title": "Bitcoin Below $100K, Coinbase Slumps, Banks Strain — Not an AI Correction Anymore",
+            "link": "https://www.investing.com/analysis/bitcoin-below-100k-coinbase-slumps-banks-strain--not-an-ai-correction-anymore-200670155",
+            "published": "2025-11-18T07:52:30+00:00",
+            "source": "investing_comcryptoopinionandanalysis",
+            "tags": "BTC|EXCHANGE|CRYPTOCURRENCY",
+            "summary": ""
+          },
+          {
             "title": "Bitcoin Slides Below $90K as ETF Investors Face First Major Losses – More Dips Ahead?",
             "link": "https://cryptonews.com/news/bitcoin-slides-below-90k-as-etf-investors-face-first-major-losses-more-dips-ahead/",
             "published": "2025-11-18T07:49:30+00:00",
@@ -81730,12 +81758,28 @@
             "summary": ""
           },
           {
+            "title": "Bitcoin ETFs Record Outflows as Average Investors Enter Red; Solana Maintains Inflow Streak",
+            "link": "https://en.coinotag.com/bitcoin-etfs-record-outflows-as-average-investors-enter-red-solana-maintains-inflow-streak",
+            "published": "2025-11-18T07:47:37+00:00",
+            "source": "coinotag",
+            "tags": "BTC|BUSINESS|MARKET|SOL|CRYPTOCURRENCY",
+            "summary": "Bitcoin and Ether ETFs experienced significant outflows totaling over $437 million on Monday, driven by Bitcoin’s price drop below $89,600, pushing average investors into losses for the first time since launch. Meanwhile, Solana ETFs continued their inflow streak with $8.2 million added, highlighting divergent trends in the crypto ETF market. Bitcoin ETFs saw $254.6 million"
+          },
+          {
             "title": "🚨 Huang Licheng’s 25x ETH Long on Hyperliquid Valued at $5.32M with $3,024 Entry and $2,908 Liquidation Price",
             "link": "https://en.coinotag.com/breakingnews/huang-lichengs-25x-eth-long-on-hyperliquid-valued-at-5-32m-with-3024-entry-and-2908-liquidation-price",
             "published": "2025-11-18T07:45:16+00:00",
             "source": "coinotag",
             "tags": "ETH|TRADING|CRYPTOCURRENCY",
             "summary": "Huang Licheng’s 25x ETH Long on Hyperliquid Valued at $5.32M with $3,024 Entry and $2,908 Liquidation Price"
+          },
+          {
+            "title": "El Salvador Buys 1,090 Bitcoin Amid IMF Loan Compliance Questions",
+            "link": "https://en.coinotag.com/el-salvador-buys-1090-bitcoin-amid-imf-loan-compliance-questions",
+            "published": "2025-11-18T07:43:44+00:00",
+            "source": "coinotag",
+            "tags": "BTC|MARKET|TRADING|CRYPTOCURRENCY",
+            "summary": "El Salvador’s government recently purchased 1,090 Bitcoin for approximately $100 million amid a market dip below $90,000, boosting its total holdings to 7,474 BTC valued at around $670 million. This move aligns with the nation’s strategy of accumulating BTC during price declines, despite ongoing IMF restrictions. El Salvador adds 1,090 BTC to reserves: The purchase"
           },
           {
             "title": "Average Bitcoin ETF investor now underwater as BTC falls below $89.6K",
@@ -81920,30 +81964,6 @@
             "source": "investing_comcryptoopinionandanalysis",
             "tags": "ETH|CRYPTOCURRENCY",
             "summary": ""
-          },
-          {
-            "title": "Bitcoin Encounters a Hidden Wave of Selling From Overleveraged Treasury Firms",
-            "link": "https://www.investing.com/analysis/bitcoin-encounters-a-hidden-wave-of-selling-from-overleveraged-treasury-firms-200670325",
-            "published": "2025-11-18T06:56:42+00:00",
-            "source": "investing_comcryptoopinionandanalysis",
-            "tags": "BTC|REGULATION|DIGITAL ASSET TREASURY|MACROECONOMICS|CRYPTOCURRENCY",
-            "summary": ""
-          },
-          {
-            "title": "Quantum Resistance: How Bitcoin and Ethereum Forge Different Security Paths Against Looming Threats",
-            "link": "https://bitcoinworld.co.in/bitcoin-ethereum-quantum-resistance-paths/",
-            "published": "2025-11-18T06:55:10+00:00",
-            "source": "bitcoinworld",
-            "tags": "BLOCKCHAIN|BTC|ETH|RESEARCH|CRYPTOCURRENCY",
-            "summary": "BitcoinWorld Quantum Resistance: How Bitcoin and Ethereum Forge Different Security Paths Against Looming Threats Imagine waking up to news that quantum computers have broken blockchain encryption. This terrifying scenario drives Bitcoin and Ethereum’s urgent quest for quantum resistance. According to Tiger Research’s groundbreaking report, these leading cryptocurrencies are taking dramatically different approaches to secure their futures against quantum threats. What Exactly is Quantum Resistance and Why Does It Matter? Quantum resistance refers to cryptographic systems that can withstand attacks from quantum computers. These powerful machines could potentially break today’s encryption standards in minutes rather than centuries. The race for quantum resistance has become crucial as Q-Day—when quantum computers become capable of breaking current encryption—approaches within 5-7 years according to experts. Bitcoin’s Conservative Path to Quantum Security Bitcoin chooses to maintain its existing structure while integrating Post-Quantum Cryptography (PQC). This approach focuses on: Preserving the current blockchain architecture Implementing PQC for transaction signing Maintaining backward compatibility Securing communication channels This conservative strategy ensures minimal disruption while achieving essential quantum resistance protection. Ethereum’s Revolutionary Quantum Resistance Strategy Ethereum takes a more transformative approach by planning to redesign its entire account structure. Their quantum resistance strategy involves: Completely rebuilding account architecture Integrating PQC at the foundational level Creating new security protocols Future-proofing the entire ecosystem When Will Quantum Computers Threaten Blockchain? Tiger Research projects Q-Day arriving within 5-7 years, a timeline that aligns with BlackRock’s concerns mentioned in their spot BTC ETF application. Major tech companies like Google and AWS have already begun transitioning to PQC systems, highlighting the urgency of achieving quantum resistance. Key Challenges in Achieving True Quantum Resistance Both Bitcoin and Ethereum face significant hurdles in their quantum resistance journeys: Technical implementation complexity Network upgrade coordination Backward compatibility requirements Community consensus building Resource allocation and development timelines The Future of Quantum Resistance in Cryptocurrency As quantum computing advances, the importance of robust quantum resistance grows exponentially. Both Bitcoin and Ethereum’s approaches demonstrate the cryptocurrency industry’s proactive stance against emerging threats. Their different strategies reflect their unique philosophies and technical requirements while pursuing the same goal: long-term security through effective quantum resistance. Frequently Asked Questions What is quantum resistance in simple terms? Quantum resistance means creating encryption that even quantum computers cannot break, ensuring blockchain security remains intact as technology advances. Why are Bitcoin and Ethereum taking different approaches? Bitcoin prioritizes stability and minimal changes, while Ethereum embraces more fundamental architectural updates based on their different design philosophies. How soon do we need quantum resistance? Experts project we need quantum resistance within 5-7 years before quantum computers become powerful enough to break current encryption. Can quantum computers break Bitcoin today? No, current quantum computers lack the power to break Bitcoin’s encryption, but the threat is real for the near future. What happens if we don’t achieve quantum resistance in time? Without quantum resistance, quantum computers could potentially break blockchain security, compromising transactions and digital assets. Are other cryptocurrencies working on quantum resistance? Yes, most major cryptocurrencies are researching quantum resistance solutions, with some already implementing early versions. Found this quantum resistance analysis valuable? Share this crucial information with your network on social media to help others understand the security future of Bitcoin and Ethereum. Knowledge sharing strengthens our entire crypto community! To learn more about the latest cryptocurrency security trends, explore our article on key developments shaping blockchain technology future adoption. This post Quantum Resistance: How Bitcoin and Ethereum Forge Different Security Paths Against Looming Threats first appeared on BitcoinWorld ."
-          },
-          {
-            "title": "Monetary Policy Easing: Bitcoin’s Triumph Over Weak Altcoins Revealed",
-            "link": "https://bitcoinworld.co.in/monetary-policy-easing-bitcoin-altcoins/",
-            "published": "2025-11-18T06:45:11+00:00",
-            "source": "bitcoinworld",
-            "tags": "ALTCOIN|BTC|BUSINESS|MACROECONOMICS|CRYPTOCURRENCY",
-            "summary": "BitcoinWorld Monetary Policy Easing: Bitcoin’s Triumph Over Weak Altcoins Revealed Could monetary policy easing be the catalyst that propels Bitcoin to new heights while leaving weaker altcoins behind? CryptoQuant CEO Ki Young Ju’s latest analysis suggests exactly that scenario. As central banks consider interest rate cuts, the cryptocurrency market stands at a critical juncture where monetary policy easing could reshape investment flows dramatically. How Monetary Policy Easing Impacts Crypto Markets Ki Young Ju explains that accommodative monetary policy, particularly interest rate cuts, creates a powerful shift in investor psychology. When central banks implement monetary policy easing, they essentially make traditional savings less attractive. This drives investors toward riskier assets, including cryptocurrencies. The current environment of monetary policy easing discussions has already begun influencing market sentiment, though the full effects may take months to materialize. Why Bitcoin Benefits Most from Monetary Policy Changes Bitcoin stands to become the primary beneficiary of any monetary policy easing for several compelling reasons: Institutional preference – Large investors view Bitcoin as digital gold ETF accessibility – Traditional investors can easily access Bitcoin through regulated products Market maturity – Bitcoin has established itself as the crypto market leader Liquidity advantage – Higher trading volumes make Bitcoin more attractive during uncertain times This monetary policy easing environment could drive significant liquidity into Bitcoin ETFs as investors seek exposure to the cryptocurrency space through familiar investment vehicles. The Coming Altcoin Liquidity Crisis While Bitcoin thrives during monetary policy easing, many altcoins face serious challenges. Projects without strong fundamentals or clear utility will struggle to attract investment. The liquidity that monetary policy easing generates tends to flow toward established assets first, leaving smaller cryptocurrencies fighting for scraps. This creates a dangerous scenario where monetary policy easing actually harms weaker altcoins despite theoretically favorable conditions. What’s the Six-Month Outlook for Bitcoin? Despite current headwinds like slowing dollar liquidity and reduced BTC inflows, Ju remains optimistic about Bitcoin’s medium-term prospects. He doesn’t expect BTC inflows to stop or turn negative within the next six months. This suggests that even before full monetary policy easing takes effect, Bitcoin maintains enough fundamental strength to withstand temporary market pressures. The gradual approach to monetary policy easing gives investors time to position themselves accordingly. Strategic Moves During Monetary Policy Transitions Investors should consider several strategies as monetary policy easing approaches: Focus on quality – Prioritize cryptocurrencies with strong fundamentals Monitor ETF flows – Watch institutional money movement patterns Avoid weak narratives – Steer clear of projects without clear utility Dollar-cost average – Build positions gradually as monetary policy evolves The coming monetary policy easing cycle represents both opportunity and risk, depending on your portfolio composition. Conclusion: Navigating the Monetary Policy Shift The impending monetary policy easing presents a clear divergence in cryptocurrency performance. Bitcoin appears positioned to capture the majority of benefits from this macroeconomic shift, while many altcoins face potential liquidity droughts. Investors who understand this dynamic can position their portfolios to capitalize on Bitcoin’s strength while avoiding the pitfalls facing weaker cryptocurrencies. The next six months will test which projects have real staying power versus those that merely rode the previous bull market wave. Frequently Asked Questions What is monetary policy easing? Monetary policy easing refers to central bank actions like interest rate cuts that make borrowing cheaper and increase money supply, typically stimulating economic activity. How does monetary policy easing affect Bitcoin? Monetary policy easing makes risk assets more attractive since traditional savings yield less returns, potentially driving more investment into Bitcoin. Why would altcoins struggle during monetary policy easing? Weaker altcoins may struggle because investors prefer established assets like Bitcoin during uncertain times, creating a liquidity crunch for smaller projects. What time frame does CryptoQuant’s prediction cover? The analysis focuses on the next six months, during which Bitcoin inflows are expected to continue despite current challenges. Should investors sell all altcoins during monetary policy easing? Not necessarily – investors should differentiate between altcoins with strong fundamentals versus those with weak narratives or no real utility. How can I track the impact of monetary policy on crypto? Monitor Bitcoin ETF flows, central bank announcements, and liquidity indicators to gauge how monetary policy changes affect cryptocurrency markets. Found this analysis helpful? Share this article with fellow crypto enthusiasts on social media to help them navigate the coming monetary policy changes! To learn more about the latest Bitcoin trends, explore our article on key developments shaping Bitcoin price action. This post Monetary Policy Easing: Bitcoin’s Triumph Over Weak Altcoins Revealed first appeared on BitcoinWorld ."
           }
         ],
         "source": "CryptoCompare",
