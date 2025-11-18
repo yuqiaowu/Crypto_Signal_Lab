@@ -131,6 +131,8 @@ jobs:
           done
 
       - name: Auto-commit updated datasets
+        if: always()
+        id: auto_commit
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: update datasets (ATR 360d, daily refresh)"
@@ -145,8 +147,18 @@ jobs:
             global_onchain_news_snapshot.json
             latest_run.txt
 
+      - name: Print files in last commit
+        if: steps.auto_commit.outputs.changes_detected == 'true'
+        run: |
+          echo "== Auto-commit summary =="
+          echo "commit: ${{ steps.auto_commit.outputs.commit_hash }}"
+          echo "message: ${{ steps.auto_commit.outputs.commit_message }}"
+          echo "== Files in last commit =="
+          git diff --name-only ${{ steps.auto_commit.outputs.commit_hash }}^ ${{ steps.auto_commit.outputs.commit_hash }} || true
+
       - name: Send email
         if: always()
+        continue-on-error: true
         uses: dawidd6/action-send-mail@v6
         with:
           server_address: smtp.gmail.com
