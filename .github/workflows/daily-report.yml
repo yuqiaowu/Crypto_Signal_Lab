@@ -74,11 +74,7 @@ jobs:
             rand_hex=$(openssl rand -hex 16 || true)
           fi
           if [ -z "$rand_hex" ]; then
-            rand_hex=$(python - <<'PY'
-import secrets
-print(secrets.token_hex(16))
-PY
-)
+            rand_hex=$(python -c 'import secrets,sys; sys.stdout.write(secrets.token_hex(16))' || true)
           fi
           {
             echo "timestamp_utc=${ts}"
