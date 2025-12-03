@@ -316,16 +316,23 @@
   },
   {
     "date": "2025-12-01",
-    "long_liquidations_usd": 210955606.46,
-    "short_liquidations_usd": 62804599.05,
-    "long_liquidations_sz": 75762.3,
-    "short_liquidations_sz": 22251.06
+    "long_liquidations_usd": 0.0,
+    "short_liquidations_usd": 0.0,
+    "long_liquidations_sz": 0.0,
+    "short_liquidations_sz": 0.0
   },
   {
     "date": "2025-12-02",
-    "long_liquidations_usd": 51339367.27,
-    "short_liquidations_usd": 80228546.81,
-    "long_liquidations_sz": 18707.55,
-    "short_liquidations_sz": 28758.62
+    "long_liquidations_usd": 28060606.12,
+    "short_liquidations_usd": 266924624.68,
+    "long_liquidations_sz": 9893.33,
+    "short_liquidations_sz": 91782.37
+  },
+  {
+    "date": "2025-12-03",
+    "long_liquidations_usd": 60534819.57,
+    "short_liquidations_usd": 55942126.64,
+    "long_liquidations_sz": 20272.83,
+    "short_liquidations_sz": 18520.3
   }
 ]
