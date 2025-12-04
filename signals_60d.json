@@ -1,91 +1,5 @@
 [
   {
-    "date": "2025-10-04",
-    "close": 4487.62,
-    "volume": 62184.12,
-    "volume_ratio_ma20": 0.42,
-    "price_percentile_20": 0.75,
-    "rsi14": 56.9,
-    "bb_lower": 3897.18,
-    "bb_lower_slope": 0.1653,
-    "atr_pct_14": 3.82,
-    "ma_5": 4395.73,
-    "ma_10": 4226.04,
-    "ma_20": 4318.64,
-    "ma_60": 4368.07,
-    "ma_120": 3667.19,
-    "ma_180": 3152.03,
-    "buy_stars": 0,
-    "sell_stars": 0,
-    "signals": {
-      "rsi_oversold": false,
-      "rsi_overbought": false,
-      "low_price_high_vol": false,
-      "high_price_high_vol": false,
-      "adx_down": false,
-      "adx_up": false
-    },
-    "adx_14": 20.39,
-    "plus_di_14": 25.96,
-    "minus_di_14": 19.77,
-    "ma_status": {
-      "ma_5": {
-        "above": true,
-        "below": false,
-        "stood_above_3": false,
-        "fell_below_3": false
-      },
-      "ma_10": {
-        "above": true,
-        "below": false,
-        "stood_above_3": false,
-        "fell_below_3": false
-      },
-      "ma_20": {
-        "above": true,
-        "below": false,
-        "stood_above_3": false,
-        "fell_below_3": false
-      },
-      "ma_60": {
-        "above": true,
-        "below": false,
-        "stood_above_3": false,
-        "fell_below_3": false
-      },
-      "ma_120": {
-        "above": true,
-        "below": false,
-        "stood_above_3": false,
-        "fell_below_3": false
-      },
-      "ma_180": {
-        "above": true,
-        "below": false,
-        "stood_above_3": false,
-        "fell_below_3": false
-      },
-      "ma_200": {
-        "above": true,
-        "below": false,
-        "stood_above_3": false,
-        "fell_below_3": false
-      },
-      "ma_250": {
-        "above": true,
-        "below": false,
-        "stood_above_3": false,
-        "fell_below_3": false
-      },
-      "ma_360": {
-        "above": true,
-        "below": false,
-        "stood_above_3": false,
-        "fell_below_3": false
-      }
-    }
-  },
-  {
     "date": "2025-10-05",
     "close": 4514.63,
     "volume": 151380.97,
@@ -2077,8 +1991,8 @@
     "ma_10": 3964.66,
     "ma_20": 3985.26,
     "ma_60": 4245.04,
-    "ma_120": 3981.4,
-    "ma_180": 3472.67,
+    "ma_120": 3981.41,
+    "ma_180": 3472.66,
     "buy_stars": 0,
     "sell_stars": 0,
     "signals": {
@@ -2334,7 +2248,7 @@
     "ma_5": 3931.18,
     "ma_10": 3936.71,
     "ma_20": 3966.14,
-    "ma_60": 4219.61,
+    "ma_60": 4219.62,
     "ma_120": 4014.65,
     "ma_180": 3506.39,
     "buy_stars": 0,
@@ -5154,6 +5068,92 @@
       "ma_360": {
         "above": false,
         "below": true,
+        "stood_above_3": false,
+        "fell_below_3": false
+      }
+    }
+  },
+  {
+    "date": "2025-12-03",
+    "close": 3188.22,
+    "volume": 216101.65,
+    "volume_ratio_ma20": 1.21,
+    "price_percentile_20": 1.0,
+    "rsi14": 51.93,
+    "bb_lower": 2731.81,
+    "bb_lower_slope": 0.2003,
+    "atr_pct_14": 6.065,
+    "ma_5": 2992.79,
+    "ma_10": 2994.97,
+    "ma_20": 2983.95,
+    "ma_60": 3576.28,
+    "ma_120": 3972.18,
+    "ma_180": 3636.89,
+    "buy_stars": 1,
+    "sell_stars": 0,
+    "signals": {
+      "rsi_oversold": false,
+      "rsi_overbought": false,
+      "low_price_high_vol": false,
+      "high_price_high_vol": false,
+      "adx_down": true,
+      "adx_up": false
+    },
+    "adx_14": 41.01,
+    "plus_di_14": 17.23,
+    "minus_di_14": 25.43,
+    "ma_status": {
+      "ma_5": {
+        "above": true,
+        "below": false,
+        "stood_above_3": false,
+        "fell_below_3": false
+      },
+      "ma_10": {
+        "above": true,
+        "below": false,
+        "stood_above_3": false,
+        "fell_below_3": false
+      },
+      "ma_20": {
+        "above": true,
+        "below": false,
+        "stood_above_3": false,
+        "fell_below_3": false
+      },
+      "ma_60": {
+        "above": false,
+        "below": true,
+        "stood_above_3": false,
+        "fell_below_3": false
+      },
+      "ma_120": {
+        "above": false,
+        "below": true,
+        "stood_above_3": false,
+        "fell_below_3": false
+      },
+      "ma_180": {
+        "above": false,
+        "below": true,
+        "stood_above_3": false,
+        "fell_below_3": false
+      },
+      "ma_200": {
+        "above": false,
+        "below": true,
+        "stood_above_3": false,
+        "fell_below_3": false
+      },
+      "ma_250": {
+        "above": false,
+        "below": true,
+        "stood_above_3": false,
+        "fell_below_3": false
+      },
+      "ma_360": {
+        "above": true,
+        "below": false,
         "stood_above_3": false,
         "fell_below_3": false
       }
