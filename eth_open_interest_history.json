@@ -1,33 +1,9 @@
 [
   {
-    "date": "2025-06-10",
-    "open_interest_usd": 1984252479.27,
-    "perp_volume_usd": 9270813090.43,
-    "open_interest_usd_change_pct": null
-  },
-  {
-    "date": "2025-06-11",
-    "open_interest_usd": 2363912278.33,
-    "perp_volume_usd": 19605439396.92,
-    "open_interest_usd_change_pct": 19.13
-  },
-  {
-    "date": "2025-06-12",
-    "open_interest_usd": 2648362899.26,
-    "perp_volume_usd": 17306052372.18,
-    "open_interest_usd_change_pct": 12.03
-  },
-  {
-    "date": "2025-06-13",
-    "open_interest_usd": 2319118260.07,
-    "perp_volume_usd": 16067372776.53,
-    "open_interest_usd_change_pct": -12.43
-  },
-  {
     "date": "2025-06-14",
     "open_interest_usd": 2023517445.1,
     "perp_volume_usd": 24385758124.02,
-    "open_interest_usd_change_pct": -12.75
+    "open_interest_usd_change_pct": null
   },
   {
     "date": "2025-06-15",
@@ -1078,5 +1054,29 @@
     "open_interest_usd": 2193495449.13,
     "perp_volume_usd": 12402523671.75,
     "open_interest_usd_change_pct": -8.07
+  },
+  {
+    "date": "2025-12-07",
+    "open_interest_usd": 2122149471.04,
+    "perp_volume_usd": 8619409379.58,
+    "open_interest_usd_change_pct": -3.25
+  },
+  {
+    "date": "2025-12-08",
+    "open_interest_usd": 2106909791.19,
+    "perp_volume_usd": 7234847981.69,
+    "open_interest_usd_change_pct": -0.72
+  },
+  {
+    "date": "2025-12-09",
+    "open_interest_usd": 2144761182.76,
+    "perp_volume_usd": 13445436893.16,
+    "open_interest_usd_change_pct": 1.8
+  },
+  {
+    "date": "2025-12-10",
+    "open_interest_usd": 2252837644.27,
+    "perp_volume_usd": 10417019680.17,
+    "open_interest_usd_change_pct": 5.04
   }
 ]
