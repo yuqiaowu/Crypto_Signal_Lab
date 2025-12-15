@@ -3,12 +3,6 @@
   "lookback_days": 360,
   "series": [
     {
-      "date": "2024-12-19",
-      "atr": 220.19,
-      "atr_pct": 6.444,
-      "close": 3417.21
-    },
-    {
       "date": "2024-12-20",
       "atr": 232.8,
       "atr_pct": 6.705,
@@ -2161,16 +2155,22 @@
       "atr": 183.14,
       "atr_pct": 5.881,
       "close": 3114.27
+    },
+    {
+      "date": "2025-12-14",
+      "atr": 177.53,
+      "atr_pct": 5.795,
+      "close": 3063.26
     }
   ],
   "summary": {
     "latest": {
-      "date": "2025-12-13",
-      "atr": 183.14,
-      "atr_pct": 5.881,
-      "close": 3114.27
+      "date": "2025-12-14",
+      "atr": 177.53,
+      "atr_pct": 5.795,
+      "close": 3063.26
     },
-    "average_pct": 6.09,
+    "average_pct": 6.089,
     "max_pct": 11.26,
     "min_pct": 3.708
   }
