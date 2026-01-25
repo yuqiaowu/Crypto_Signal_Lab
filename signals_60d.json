@@ -1,91 +1,5 @@
 [
   {
-    "date": "2025-11-25",
-    "close": 2959.38,
-    "volume": 143018.1,
-    "volume_ratio_ma20": 0.71,
-    "price_percentile_20": 0.3,
-    "rsi14": 37.79,
-    "bb_lower": 2639.44,
-    "bb_lower_slope": -0.6727,
-    "atr_pct_14": 7.198,
-    "ma_5": 2850.2,
-    "ma_10": 2936.15,
-    "ma_20": 3150.55,
-    "ma_60": 3748.22,
-    "ma_120": 4013.66,
-    "ma_180": 3616.12,
-    "buy_stars": 1,
-    "sell_stars": 0,
-    "signals": {
-      "rsi_oversold": false,
-      "rsi_overbought": false,
-      "low_price_high_vol": false,
-      "high_price_high_vol": false,
-      "adx_down": true,
-      "adx_up": false
-    },
-    "adx_14": 47.69,
-    "plus_di_14": 10.66,
-    "minus_di_14": 26.95,
-    "ma_status": {
-      "ma_5": {
-        "above": true,
-        "below": false,
-        "stood_above_3": false,
-        "fell_below_3": false
-      },
-      "ma_10": {
-        "above": true,
-        "below": false,
-        "stood_above_3": false,
-        "fell_below_3": false
-      },
-      "ma_20": {
-        "above": false,
-        "below": true,
-        "stood_above_3": false,
-        "fell_below_3": false
-      },
-      "ma_60": {
-        "above": false,
-        "below": true,
-        "stood_above_3": false,
-        "fell_below_3": false
-      },
-      "ma_120": {
-        "above": false,
-        "below": true,
-        "stood_above_3": false,
-        "fell_below_3": false
-      },
-      "ma_180": {
-        "above": false,
-        "below": true,
-        "stood_above_3": false,
-        "fell_below_3": false
-      },
-      "ma_200": {
-        "above": false,
-        "below": true,
-        "stood_above_3": false,
-        "fell_below_3": false
-      },
-      "ma_250": {
-        "above": false,
-        "below": true,
-        "stood_above_3": false,
-        "fell_below_3": false
-      },
-      "ma_360": {
-        "above": false,
-        "below": true,
-        "stood_above_3": false,
-        "fell_below_3": false
-      }
-    }
-  },
-  {
     "date": "2025-11-26",
     "close": 3026.5,
     "volume": 127934.79,
@@ -2592,7 +2506,7 @@
     "ma_5": 2965.62,
     "ma_10": 2941.12,
     "ma_20": 3037.03,
-    "ma_60": 3194.92,
+    "ma_60": 3194.91,
     "ma_120": 3726.41,
     "ma_180": 3701.94,
     "buy_stars": 0,
@@ -5102,6 +5016,92 @@
     "adx_14": 26.35,
     "plus_di_14": 16.21,
     "minus_di_14": 25.06,
+    "ma_status": {
+      "ma_5": {
+        "above": false,
+        "below": true,
+        "stood_above_3": false,
+        "fell_below_3": false
+      },
+      "ma_10": {
+        "above": false,
+        "below": true,
+        "stood_above_3": false,
+        "fell_below_3": false
+      },
+      "ma_20": {
+        "above": false,
+        "below": true,
+        "stood_above_3": false,
+        "fell_below_3": false
+      },
+      "ma_60": {
+        "above": false,
+        "below": true,
+        "stood_above_3": false,
+        "fell_below_3": false
+      },
+      "ma_120": {
+        "above": false,
+        "below": true,
+        "stood_above_3": false,
+        "fell_below_3": false
+      },
+      "ma_180": {
+        "above": false,
+        "below": true,
+        "stood_above_3": false,
+        "fell_below_3": false
+      },
+      "ma_200": {
+        "above": false,
+        "below": true,
+        "stood_above_3": false,
+        "fell_below_3": false
+      },
+      "ma_250": {
+        "above": false,
+        "below": true,
+        "stood_above_3": false,
+        "fell_below_3": false
+      },
+      "ma_360": {
+        "above": false,
+        "below": true,
+        "stood_above_3": false,
+        "fell_below_3": false
+      }
+    }
+  },
+  {
+    "date": "2026-01-24",
+    "close": 2953.5,
+    "volume": 36625.73,
+    "volume_ratio_ma20": 0.31,
+    "price_percentile_20": 0.15,
+    "rsi14": 39.51,
+    "bb_lower": 2871.41,
+    "bb_lower_slope": -0.8534,
+    "atr_pct_14": 4.143,
+    "ma_5": 2956.95,
+    "ma_10": 3118.39,
+    "ma_20": 3152.8,
+    "ma_60": 3068.35,
+    "ma_120": 3408.29,
+    "ma_180": 3698.56,
+    "buy_stars": 0,
+    "sell_stars": 0,
+    "signals": {
+      "rsi_oversold": false,
+      "rsi_overbought": false,
+      "low_price_high_vol": false,
+      "high_price_high_vol": false,
+      "adx_down": false,
+      "adx_up": false
+    },
+    "adx_14": 26.0,
+    "plus_di_14": 15.96,
+    "minus_di_14": 24.67,
     "ma_status": {
       "ma_5": {
         "above": false,
